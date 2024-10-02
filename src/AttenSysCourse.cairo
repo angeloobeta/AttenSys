@@ -16,6 +16,7 @@ pub trait IAttenSysCourse<TContractState> {
     fn get_creator_info(self: @TContractState, creator: ContractAddress) -> AttenSysCourse::Creator;
 }
 
+//Todo, make a count of the total number of users that finished the course.
 
 #[starknet::contract]
 mod AttenSysCourse {
@@ -211,3 +212,185 @@ mod AttenSysCourse {
     }
     
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// probably something like
+
+
+// #[starknet::contract]
+// mod YourContract {
+//     use starknet::ContractAddress;
+//     use core::traits::Into;
+//     use core::starknet::storage_access;
+//     use core::array::ArrayTrait;
+//     use starknet::storage::{Map, Vec, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, VecTrait, MutableVecTrait};
+
+//     #[storage]
+//     struct Storage {
+//         specific_video_course_uri_with_identifier: Map::<u256, Vec<felt252>>,
+//     }
+
+//     #[external(v0)]
+//     fn set_course_uri(ref self: ContractState, course_identifier: u256, uri: Array<felt252>) {
+//         let mut vec = self.specific_video_course_uri_with_identifier.entry(course_identifier);
+//         for element in uri {
+//             vec.append().write(element);
+//         };
+//     }
+
+//     #[external(v0)]
+//     fn get_course_uri(self: @ContractState, course_identifier: u256) -> Array<felt252> {
+//         let vec = self.specific_video_course_uri_with_identifier.entry(course_identifier);
+//         let mut array = ArrayTrait::new();
+//         let len = vec.len();
+//         let mut i: u64 = 0;
+//         loop {
+            // if i >= len {
+            //     break;
+            // }
+            // if let Option::Some(element) = vec.get(i) {
+            //     array.append(element.read());
+            // }
+            // i += 1;
+        // };
+//         array
+//     }
+// }
+
+
+// you can combine each concept (storage, mapping, vec) etc together, make sure you understand the fundamentals first https://book.cairo-lang.org/ch14-01-00-contract-storage.html#modeling-of-the-contract-storage-in-the-core-library
+
+// and then you can chat with the chatbot to iteratively build what you want
+
+// my guess is just you're not importing all the required traits
+
+
+// fn remove_at_index<T, impl TCopy: Copy<T>>(arr: @Array<T>, index: usize) -> Array<T> {
+//     let mut new_arr = ArrayTrait::new();
+//     let len = arr.len();
+
+//     let mut i: usize = 0;
+//     loop {
+//         if i == len {
+//             break;
+//         }
+//         if i != index {
+//             new_arr.append(*arr.at(i));
+//         }
+//         i += 1;
+//     };
+
+//     new_arr
+// }
+
+    // #[generate_trait]
+    // impl InternalFunctions of InternalFunctionsTrait {
+    //     fn clear_info(ref self: ContractState) {
+    //         let mut index = 0;
+    //         while index < self.all_course_info.len() {
+    //             self.all_course_info.pop_front();
+    //             index += 1;
+    //         }
+    //     }
+    // }
+
+
+    //signature 
+//     #[starknet::contract]
+// mod SignatureVerifier {
+//     use core::hash::LegacyHash;
+//     use starknet::{ContractAddress, get_caller_address};
+//     use core::ecdsa::check_ecdsa_signature;
+
+//     #[storage]
+//     struct Storage {
+//         signature_counts: LegacyMap::<ContractAddress, u32>,
+//     }
+
+//     #[event]
+//     #[derive(Drop, starknet::Event)]
+//     enum Event {
+//         SignatureVerified: SignatureVerified,
+//     }
+
+//     #[derive(Drop, starknet::Event)]
+//     struct SignatureVerified {
+//         signer: ContractAddress,
+//         count: u32,
+//     }
+
+//     #[external(v0)]
+//     fn verify_signature(
+//         ref self: ContractState,
+//         message_hash: felt252,
+//         signature: (felt252, felt252),
+//         public_key: felt252
+//     ) -> bool {
+//         // Verify the signature
+//         let is_valid = check_ecdsa_signature(
+//             message_hash: message_hash,
+//             public_key: public_key,
+//             signature_r: signature.0,
+//             signature_s: signature.1
+//         );
+
+//         if is_valid {
+//             // Get the signer's address from the public key
+//             let signer = get_address_from_public_key(public_key);
+
+//             // Increment the signature count for this address
+//             let mut count = self.signature_counts.read(signer);
+//             count += 1;
+//             self.signature_counts.write(signer, count);
+
+//             // Emit an event
+//             self.emit(Event::SignatureVerified(SignatureVerified { signer, count }));
+//         }
+
+//         is_valid
+//     }
+
+//     #[external(v0)]
+//     fn get_signature_count(self: @ContractState, address: ContractAddress) -> u32 {
+//         self.signature_counts.read(address)
+//     }
+
+//     fn get_address_from_public_key(public_key: felt252) -> ContractAddress {
+//         // This is a simplified version. In a real implementation,
+//         // you would derive the address from the public key using a proper hashing algorithm.
+//         ContractAddress::try_from(public_key).unwrap()
+//     }
+// }

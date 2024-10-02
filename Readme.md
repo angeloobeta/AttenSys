@@ -4,11 +4,8 @@
 // to securely manage certifications, ensuring authenticity and transparency, 
 // while simplifying the attendance marking process for seamless record-keeping 
 // or course completion or event attendance. Whether you're issuing certificates 
-// for courses, events, or workshops, AttenSys guarantees a secure, scalable, and user-friendly solution
-// Online streaming
+// for courses(courses have Online streaming feature), events, or workshops, AttenSys guarantees a secure, scalable, and user-friendly solution
 
-
-// explore the use of session keys, to further enhance the seamless integration.
 
 //required
 //1. create account by just signing, using their wallet address, no user information required
@@ -48,6 +45,29 @@
 //figure out how to use checkpoint for graphql explorer : https://docs.checkpoint.box/guides/quickstart
 
 
-//buy a course 
-//pay to register event
+
+
+features include:
+//create course and upload videos to the course folder created
+//ability to stream the course
+//buy a course/ courses can be made free too,
+//after finishing a course, ability to claim certification
 //earn points for every course, event and attendance marked.
+//ability check certification and also track all activities being done on the platform, like who created an event, what course was created, what time, and the search option should be able to search for a certifaction issued, making it look like etherscan interface.FOR THE EXPLORER
+//should be able to track all events that has been created, course created, school registered, attendance signed, certification issued
+
+//register event, ability to register for event
+//mark attendance barcode for event
+//events created should have a personalized dashboard
+//the personalized dashboard should have optins to track data of the numbr of attendees and their respective addresses
+// ability to batch issue attendance certificate to all attendees
+//each event should have an info page that holds all information about the event
+
+//create organization/school page/bootcamp
+//manage all course class (no class content here)
+//ability to create class 
+//ability for student to register for the class
+//ability for students to mark attendance for classes registered for
+//ability to start an end class. once class ends, no one can mark attendance.
+//info page for the school, and respective classes under the school/organization/bootcamp
+
