@@ -6,7 +6,9 @@ pub trait IAttenSysCourse<TContractState> {
     fn end_event(ref self: TContractState, event_identifier: u256);
     fn alter_start_end_time(ref self: TContractState, new_start_time: u256, new_end_time : u256);
     fn batch_certify_attendees(ref self: TContractState, attendees: Array<ContractAddress>);
-    fn get_attendance_status(ref self: TContractState, attendee : ContractAddress);
+    fn get_attendance_status(ref self: TContractState, attendee: ContractAddress) -> bool;
+    fn get_all_attended_events(ref self: TContractState, user: ContractAddress)-> Array<AttenSysEvent::EventStruct>;
+    fn mark_attendance(ref self: TContractState, event_identifier: u256);
     //function to create an event, ability to start and end event in the event struct, each event will have a unique ID
     //function to mark attendace, with signature. keep track of all addresses that have signed (implementing a gasless transaction from frontend);
     //function to batch issue attendance certificate for events
