@@ -3,15 +3,16 @@ use core::starknet::ContractAddress;
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {
     //implement a paid event feature in the create_event & implement a register for event function that takes into consideration payment factor
-    fn create_event(ref self: TContractState, owner_: ContractAddress, event_name: ByteArray, start_time_: u256, end_time_: u256);
-    fn alter_start_end_time(ref self: TContractState, new_start_time: u256, new_end_time : u256);
-    fn batch_certify_attendees(ref self: TContractState, attendees: Array<ContractAddress>);
+    fn create_event(ref self: TContractState, owner_: ContractAddress, event_name: ByteArray, start_time_: u256, end_time_: u256, reg_status : bool);
+    fn end_event(ref self: TContractState, event_identifier: u256);
+    fn batch_certify_attendees(ref self: TContractState, event_identifier: u256);
     fn mark_attendance(ref self: TContractState, event_identifier: u256);
     fn register_for_event(ref self: TContractState, event_identifier: u256);
     // fn get_registered_users(ref self: TContractState, event_identifier : u256, passcode : felt252) -> Array<ContractAddress>;
     fn get_attendance_status(ref self: TContractState, attendee: ContractAddress, event_identifier : u256) -> bool;
     fn get_all_attended_events(ref self: TContractState, user: ContractAddress)-> Array<AttenSysEvent::UserAttendedEventStruct>;
     fn get_all_list_registered_events(ref self: TContractState, user : ContractAddress) -> Array<AttenSysEvent::UserAttendedEventStruct>;
+    fn start_end_reg(ref self: TContractState, reg_stat: bool, event_identifier: u256);
     
     //function to create an event, ability to start and end event in the event struct, each event will have a unique ID
     //function to mark attendace, with signature. keep track of all addresses that have signed (implementing a gasless transaction from frontend);
@@ -63,6 +64,7 @@ mod AttenSysEvent {
 
     #[derive(Drop,Copy,Serde, starknet::Store)]
     pub struct Time {
+        registration_open : bool,
         start_time : u256,
         end_time : u256,
     }
@@ -76,11 +78,12 @@ mod AttenSysEvent {
 
     #[abi(embed_v0)]
     impl IAttenSysEventImpl of super::IAttenSysEvent<ContractState> {
-        fn create_event(ref self: ContractState, owner_: ContractAddress, event_name: ByteArray, start_time_: u256, end_time_: u256){
+        fn create_event(ref self: ContractState, owner_: ContractAddress, event_name: ByteArray, start_time_: u256, end_time_: u256, reg_status : bool){
             let pre_existing_counter = self.event_identifier.read();
             let new_identifier = pre_existing_counter + 1;
             
             let time_data : Time = Time {
+                registration_open : reg_status,
                 start_time : start_time_,
                 end_time : end_time_,
             };
@@ -106,20 +109,26 @@ mod AttenSysEvent {
             self.event_identifier.write(new_identifier);
         }
 
-        fn alter_start_end_time(ref self: ContractState, new_start_time: u256, new_end_time : u256){
+        fn end_event(ref self: ContractState, event_identifier: u256){
             //only event owner
-
+            self.end_event_(event_identifier);
         }
 
-        fn batch_certify_attendees(ref self: ContractState, attendees: Array<ContractAddress>){
+        fn batch_certify_attendees(ref self: ContractState, event_identifier: u256){
             //only event owner
+            let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.event_organizer == get_caller_address(), 'not authorized');
             //update attendance_status here
-
+            if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
+                for i in 0..self.all_attendance_marked_for_event.entry(event_identifier).len() {
+                    self.attendance_status.entry((self.all_attendance_marked_for_event.entry(event_identifier).at(i).read(),event_identifier)).write(true);
+                }
+            }
         }
 
         fn mark_attendance(ref self: ContractState, event_identifier: u256){
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
-            assert(self.registered.entry((get_caller_address(), event_identifier)).read() == true, 'already registered');
+            assert(self.registered.entry((get_caller_address(), event_identifier)).read() == true, 'not registered');
             assert(event_details.active_status == true, 'not started');
             assert(get_block_timestamp().into() >= event_details.time.start_time, 'not started');       
             let count = self.specific_event_with_identifier.entry(event_identifier).signature_count.read();            
@@ -210,16 +219,33 @@ mod AttenSysEvent {
                 arr
         }
 
+        fn start_end_reg(ref self: ContractState, reg_stat: bool, event_identifier: u256 ){
+            let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            //only event owner
+            assert(event_details.event_organizer == get_caller_address(), 'not authorized');
+            self.specific_event_with_identifier.entry(event_identifier).time.registration_open.write(reg_stat);
+             //loop through the all_event vec and end the specific event
+             if self.all_event.len() > 0 {
+                for i in 0..self.all_event.len() {
+                    if self.all_event.at(i).read().event_name == event_details.event_name {
+                        self.all_event.at(i).time.registration_open.write(reg_stat);
+                    }
+                }
+            }  
+        }
+
+
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        fn end_event(ref self: ContractState, event_identifier: u256){
+        fn end_event_(ref self: ContractState, event_identifier: u256){
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
             //only event owner
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
 
             let time_data : Time = Time {
+                registration_open : false,
                 start_time : event_details.time.start_time,
                 end_time : 0,
             };
