@@ -1,11 +1,16 @@
 use starknet::{ContractAddress, contract_address_const,};
 // get_caller_address,
-use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address};
+use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address,start_cheat_block_timestamp_global};
 
 // use attendsys::AttenSys::IAttenSysSafeDispatcher;
 // use attendsys::AttenSys::IAttenSysSafeDispatcherTrait;
 use attendsys::AttenSysCourse::IAttenSysCourseDispatcher;
 use attendsys::AttenSysCourse::IAttenSysCourseDispatcherTrait;
+
+use attendsys::AttenSysEvent::IAttenSysEventDispatcher;
+use attendsys::AttenSysEvent::IAttenSysEventDispatcherTrait;
+
+
 
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
@@ -65,3 +70,63 @@ fn test_add_replace_course_content(){
     assert(all_creator_courses.len() > 0, 'non write CC'); 
 }
 
+#[test]
+fn test_create_event() {
+    let contract_address = deploy_contract("AttenSysEvent");
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let owner_address_two: ContractAddress = contract_address_const::<'owner_two'>();
+    let dispatcher = IAttenSysEventDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let event_name : ByteArray = "web3";
+    dispatcher.create_event(owner_address,event_name.clone(),2238493, 32989989, true);  
+    let event_details_check = dispatcher.get_event_details(1);
+    assert(event_details_check.event_name == event_name, 'wrong_name');
+    assert(event_details_check.time.registration_open == true, 'not set');
+    assert(event_details_check.time.start_time == 2238493, 'wrong start');
+    assert(event_details_check.time.end_time == 32989989, 'wrong end');
+    assert(event_details_check.event_organizer == owner_address, 'wrong owner');
+
+    start_cheat_caller_address(contract_address, owner_address_two);
+    let event_name_two : ByteArray = "web2";
+    dispatcher.create_event(owner_address_two,event_name_two.clone(),2238493, 32989989, true); 
+    
+    let event_details_check_two = dispatcher.get_event_details(2);
+    assert(event_details_check_two.event_name == event_name_two, 'wrong_name');
+
+}
+
+#[test]
+fn test_reg_nd_mark() {
+    let contract_address = deploy_contract("AttenSysEvent");
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let attendee1_address: ContractAddress = contract_address_const::<'attendee1_address'>();
+    let attendee2_address: ContractAddress = contract_address_const::<'attendee2_address'>();
+    let attendee3_address: ContractAddress = contract_address_const::<'attendee3_address'>();
+    
+    
+    let dispatcher = IAttenSysEventDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let event_name : ByteArray = "web3";
+    dispatcher.create_event(owner_address,event_name.clone(),223, 329, true);  
+
+    start_cheat_block_timestamp_global(55555);
+    start_cheat_caller_address(contract_address, attendee1_address);
+    dispatcher.register_for_event(1);
+    dispatcher.mark_attendance(1);
+    let all_events = dispatcher.get_all_attended_events(attendee1_address);
+    assert(all_events.len() == 1, 'wrong length');
+    
+    start_cheat_caller_address(contract_address, attendee2_address);
+    dispatcher.register_for_event(1);
+    dispatcher.mark_attendance(1);
+
+    start_cheat_caller_address(contract_address, attendee3_address);
+    dispatcher.register_for_event(1);
+    dispatcher.mark_attendance(1);
+
+    start_cheat_caller_address(contract_address, owner_address);
+    dispatcher.batch_certify_attendees(1);
+
+    let attendance_stat = dispatcher.get_attendance_status(attendee3_address, 1);
+    assert(attendance_stat == true, 'wrong attenStat');
+}
