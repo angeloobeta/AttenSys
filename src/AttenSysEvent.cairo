@@ -3,6 +3,7 @@ use core::starknet::ContractAddress;
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {
     //implement a paid event feature in the create_event & implement a register for event function that takes into consideration payment factor
+    //
     fn create_event(ref self: TContractState, owner_: ContractAddress, event_name: ByteArray, start_time_: u256, end_time_: u256, reg_status : bool);
     fn end_event(ref self: TContractState, event_identifier: u256);
     fn batch_certify_attendees(ref self: TContractState, event_identifier: u256);
@@ -13,10 +14,9 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_all_attended_events(ref self: TContractState, user: ContractAddress)-> Array<AttenSysEvent::UserAttendedEventStruct>;
     fn get_all_list_registered_events(ref self: TContractState, user : ContractAddress) -> Array<AttenSysEvent::UserAttendedEventStruct>;
     fn start_end_reg(ref self: TContractState, reg_stat: bool, event_identifier: u256);
+    fn get_event_details(ref self: TContractState, event_identifier: u256) -> AttenSysEvent::EventStruct;
     
-    //function to create an event, ability to start and end event in the event struct, each event will have a unique ID
-    //function to mark attendace, with signature. keep track of all addresses that have signed (implementing a gasless transaction from frontend);
-    //function to batch issue attendance certificate for events
+    //(implementing a gasless transaction from frontend);
     //function to transfer event ownership
     //implement a feature to work on the passcode, save it when creating the event
 }
@@ -25,7 +25,7 @@ pub trait IAttenSysEvent<TContractState> {
 mod AttenSysEvent {
     use core::starknet::{ContractAddress, get_caller_address,get_block_timestamp};
     use core::starknet::storage::{
-        Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait, MutableVecTrait
+        Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, MutableVecTrait
     };
 
     #[storage]
@@ -54,25 +54,25 @@ mod AttenSysEvent {
     //create a separate struct for the all_attended_event that will only have the time the event took place and its name
     #[derive(Drop, Serde, starknet::Store)]
     pub struct EventStruct {
-        event_name : ByteArray,
-        time : Time,
-        active_status : bool,
-        signature_count : u256,
-        event_organizer : ContractAddress,
-        registered_attendants : u256,
+        pub event_name : ByteArray,
+        pub time : Time,
+        pub active_status : bool,
+        pub signature_count : u256,
+        pub event_organizer : ContractAddress,
+        pub registered_attendants : u256,
     }
 
     #[derive(Drop,Copy,Serde, starknet::Store)]
     pub struct Time {
-        registration_open : bool,
-        start_time : u256,
-        end_time : u256,
+        pub registration_open : bool,
+        pub start_time : u256,
+        pub end_time : u256,
     }
 
     #[derive(Drop, Serde, starknet::Store)]
     pub struct UserAttendedEventStruct {
-        event_name : ByteArray,
-        time : u256,
+        pub event_name : ByteArray,
+        pub time : u256,
     }
 
 
@@ -232,6 +232,10 @@ mod AttenSysEvent {
                     }
                 }
             }  
+        }
+
+        fn get_event_details(ref self: ContractState, event_identifier: u256) -> EventStruct{           
+            self.specific_event_with_identifier.entry(event_identifier).read()
         }
 
 
