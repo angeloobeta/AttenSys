@@ -4,11 +4,11 @@ use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address,start_
 
 // use attendsys::AttenSys::IAttenSysSafeDispatcher;
 // use attendsys::AttenSys::IAttenSysSafeDispatcherTrait;
-use attendsys::AttenSysCourse::IAttenSysCourseDispatcher;
-use attendsys::AttenSysCourse::IAttenSysCourseDispatcherTrait;
+use attendsys::contracts::AttenSysCourse::IAttenSysCourseDispatcher;
+use attendsys::contracts::AttenSysCourse::IAttenSysCourseDispatcherTrait;
 
-use attendsys::AttenSysEvent::IAttenSysEventDispatcher;
-use attendsys::AttenSysEvent::IAttenSysEventDispatcherTrait;
+use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcher;
+use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
 
 
 
