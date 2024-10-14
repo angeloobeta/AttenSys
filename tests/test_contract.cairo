@@ -15,7 +15,10 @@ use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     let contract = declare(name).unwrap();
-    let (contract_address, _) = contract.deploy(@ArrayTrait::new()).unwrap();
+    let mut constuctor_arg = ArrayTrait::new();
+    let contract_owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    constuctor_arg.append(contract_owner_address.into());
+    let (contract_address, _) = contract.deploy(@constuctor_arg).unwrap();
     contract_address
 }
 
