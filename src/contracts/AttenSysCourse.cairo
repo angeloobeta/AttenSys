@@ -66,6 +66,8 @@ mod AttenSysCourse {
         pub second: felt252,
     }
 
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {}
     
     #[abi(embed_v0)]
     impl IAttenSysCourseImpl of super::IAttenSysCourse<ContractState> {

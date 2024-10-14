@@ -75,7 +75,10 @@ mod AttenSysEvent {
         pub time : u256,
     }
 
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {}
 
+    
     #[abi(embed_v0)]
     impl IAttenSysEventImpl of super::IAttenSysEvent<ContractState> {
         fn create_event(ref self: ContractState, owner_: ContractAddress, event_name: ByteArray, start_time_: u256, end_time_: u256, reg_status : bool){

@@ -96,6 +96,9 @@ mod AttenSysOrg {
         pub num_of_reg_students: u256,
     }
 
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {}
+
     #[abi(embed_v0)]
     impl IAttenSysOrgImpl of super::IAttenSysOrg<ContractState> {
         // organizations can create a profile
