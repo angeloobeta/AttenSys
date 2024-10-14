@@ -1,0 +1,22 @@
+{
+  "name": "attendsys",
+  "version": "1.0.0",
+  "description": "// AttenSys // An innovative platform designed to streamline the issuance of educational certificates  // and efficiently track attendance for a course or event. AttenSys enables institutions  // to securely manage certifications, ensuring authenticity and transparency,  // while simplifying the attendance marking process for seamless record-keeping  // or course completion or event attendance. Whether you're issuing certificates  // for courses(courses have Online streaming feature), events, or workshops, AttenSys guarantees a secure, scalable, and user-friendly solution",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "chain": "starknet-devnet --seed 0 --account-class cairo1",
+    "test": "snforge test",
+    "deploy": "ts-node scripts/deploy.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "starknet": "^6.11.0"
+  }
+}
