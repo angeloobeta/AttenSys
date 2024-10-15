@@ -14,9 +14,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "deploy": "^1.0.3",
     "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
     "path": "^0.12.7",
+    "prettier": "^3.3.3",
     "starknet": "^6.11.0"
   }
 }
