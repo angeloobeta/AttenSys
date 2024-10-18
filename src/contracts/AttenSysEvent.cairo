@@ -1,5 +1,6 @@
 use core::starknet::{ContractAddress};
 
+//to do : return the nft id and token uri in the get functions
 
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {

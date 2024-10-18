@@ -79,58 +79,131 @@ fn test_create_course() {
 
     let dispatcher = IAttenSysCourseDispatcher { contract_address };
     
+    let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
+    let nft_name_b = "cairo";
+    let nft_symb_b = "CAO";
     
     let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
     let nft_name_a = "cairo";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a,token_uri_a);
+    dispatcher.create_course(owner_address, true, nft_name_b, nft_symb_b,token_uri_b);
     
-    // let token_uri: ByteArray = "https://dummy_uri.com/your_id";
-    // let nft_name = "cairo";
-    // let nft_symb = "CAO";
-    // //call again
-    // start_cheat_caller_address(contract_address, owner_address_two);
-    // dispatcher.create_course(owner_address_two, true, nft_name, nft_symb,token_uri);
-    // let creator_courses = dispatcher.get_all_creator_courses(owner_address);
-    // let creator_info = dispatcher.get_creator_info(owner_address);
+    let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
+    let nft_name = "cairo";
+    let nft_symb = "CAO";
+    //call again
+    start_cheat_caller_address(contract_address, owner_address_two);
+    dispatcher.create_course(owner_address_two, true, nft_name, nft_symb,token_uri);
+    let creator_courses = dispatcher.get_all_creator_courses(owner_address);
+    let creator_courses_two = dispatcher.get_all_creator_courses(owner_address_two);
+    let creator_info = dispatcher.get_creator_info(owner_address);
 
-    // let array_calldata = array![1, 2];
-    // let course_info = dispatcher.get_course_infos(array_calldata);
-    // assert(creator_courses.len() == 2, 'wrong count');
-    // assert(*creator_courses.at(0).owner == owner_address, 'wrong owner');
-    // assert(*creator_courses.at(1).owner == owner_address, 'wrong owner');
-    // assert(creator_info.creator_status == true, 'failed not creator');
-    // assert(course_info.len() == 2, 'get course fail');
+    let array_calldata = array![1, 2, 3];
+    let course_info = dispatcher.get_course_infos(array_calldata);
+    assert(creator_courses.len() == 2, 'wrong count');
+    assert(creator_courses_two.len() == 1, 'wrong count');
+    assert(*creator_courses.at(0).owner == owner_address, 'wrong owner');
+    assert(*creator_courses.at(1).owner == owner_address, 'wrong owner');
+    assert(*creator_courses_two.at(0).owner == owner_address_two, 'wrong owner');
+    assert(creator_info.creator_status == true, 'failed not creator');
+    assert(course_info.len() == 3, 'get course fail');
 }
 
-// #[test]
-// fn test_add_replace_course_content() {
-//     let contract_address = deploy_contract("AttenSysCourse");
-//     let owner_address: ContractAddress = contract_address_const::<'owner'>();
-//     let dispatcher = IAttenSysCourseDispatcher { contract_address };
-//     start_cheat_caller_address(contract_address, owner_address);
-//     dispatcher.create_course(owner_address, true);
-//     dispatcher.add_replace_course_content(1, owner_address, '123', '567');
-//     let array_calldata = array![1];
-//     let course_info = dispatcher.get_course_infos(array_calldata);
-//     assert(*course_info.at(0).uri.first == '123', 'wrong first uri');
-//     assert(*course_info.at(0).uri.second == '567', 'wrong second uri');
+#[test]
+fn test_finish_course_n_claim() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let owner_address_two: ContractAddress = contract_address_const::<'owner_two'>();
+    let viewer1_address: ContractAddress = contract_address_const::<'viewer1_address'>();
+    let viewer2_address: ContractAddress = contract_address_const::<'viewer2_address'>();
+    let viewer3_address: ContractAddress = contract_address_const::<'viewer3_address'>();
 
-//     let second_array_calldata = array![1];
-//     dispatcher.add_replace_course_content(1, owner_address, '555', '666');
-//     let course_info = dispatcher.get_course_infos(second_array_calldata);
-//     assert(*course_info.at(0).uri.first == '555', 'wrong first uri');
-//     assert(*course_info.at(0).uri.second == '666', 'wrong second uri');
+    let dispatcher = IAttenSysCourseDispatcher { contract_address };
+    
+    let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
+    let nft_name_b = "cairo_b";
+    let nft_symb_b = "CAO";
+    
+    let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
+    let nft_name_a = "cairo_a";
+    let nft_symb_a = "CAO";
+    start_cheat_caller_address(contract_address, owner_address);
+    dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a,token_uri_a);
+    dispatcher.create_course(owner_address, true, nft_name_b, nft_symb_b,token_uri_b);
+    
+    let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
+    let nft_name = "cairo_c";
+    let nft_symb = "CAO";
+    //call again
+    start_cheat_caller_address(contract_address, owner_address_two);
+    dispatcher.create_course(owner_address_two, true, nft_name, nft_symb,token_uri);
 
-//     let all_courses_info = dispatcher.get_all_courses_info();
-//     assert(all_courses_info.len() > 0, 'non-write');
-//     assert(*all_courses_info.at(0).uri.first == '555', 'wrong uri replacement');
-//     assert(*all_courses_info.at(0).uri.second == '666', 'wrong uri replacement');
+    start_cheat_caller_address(contract_address, viewer1_address);
+    dispatcher.finish_course_claim_certification(1);
+    start_cheat_caller_address(contract_address, viewer2_address);
+    dispatcher.finish_course_claim_certification(2);
+    start_cheat_caller_address(contract_address, viewer3_address);
+    dispatcher.finish_course_claim_certification(3);
+    
+    let nftContract_a = dispatcher.get_course_nft_contract(1);
+    let nftContract_b = dispatcher.get_course_nft_contract(2);
+    let nftContract_c = dispatcher.get_course_nft_contract(3);
 
-//     let all_creator_courses = dispatcher.get_all_creator_courses(owner_address);
-//     assert(all_creator_courses.len() > 0, 'non write CC');
-// }
+    let erc721_token_a = IERC721Dispatcher { contract_address : nftContract_a };
+    let erc721_token_b = IERC721Dispatcher { contract_address : nftContract_b };
+    let erc721_token_c = IERC721Dispatcher { contract_address : nftContract_c };
+    
+    
+    let token_name_a = erc721_token_a.name();
+    let token_name_b = erc721_token_b.name();
+    let token_name_c = erc721_token_c.name();
+
+    assert(erc721_token_a.owner_of(1) == viewer1_address, 'wrong 1 token id');
+    assert(erc721_token_b.owner_of(1) == viewer2_address, 'wrong 2 token id');
+    assert(erc721_token_c.owner_of(1) == viewer3_address, 'wrong 3 token id');
+    assert(token_name_a == "cairo_a", 'wrong token a name');
+    assert(token_name_b == "cairo_b", 'wrong token b name');
+    assert(token_name_c == "cairo_c", 'wrong token name');
+
+}
+
+#[test]
+fn test_add_replace_course_content() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let dispatcher = IAttenSysCourseDispatcher { contract_address };
+    
+    let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
+    let nft_name_a = "cairo_a";
+    let nft_symb_a = "CAO";
+    start_cheat_caller_address(contract_address, owner_address);
+    dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a,token_uri_a);
+
+    dispatcher.add_replace_course_content(1, owner_address, '123', '567');
+    let array_calldata = array![1];
+    let course_info = dispatcher.get_course_infos(array_calldata);
+    assert(*course_info.at(0).uri.first == '123', 'wrong first uri');
+    assert(*course_info.at(0).uri.second == '567', 'wrong second uri');
+
+    let second_array_calldata = array![1];
+    dispatcher.add_replace_course_content(1, owner_address, '555', '666');
+    let course_info = dispatcher.get_course_infos(second_array_calldata);
+    assert(*course_info.at(0).uri.first == '555', 'wrong first uri');
+    assert(*course_info.at(0).uri.second == '666', 'wrong second uri');
+
+    let all_courses_info = dispatcher.get_all_courses_info();
+    assert(all_courses_info.len() > 0, 'non-write');
+    assert(*all_courses_info.at(0).uri.first == '555', 'wrong uri replacement');
+    assert(*all_courses_info.at(0).uri.second == '666', 'wrong uri replacement');
+
+    let all_creator_courses = dispatcher.get_all_creator_courses(owner_address);
+    assert(all_creator_courses.len() > 0, 'non write CC');
+}
 
 #[test]
 fn test_create_event() {
