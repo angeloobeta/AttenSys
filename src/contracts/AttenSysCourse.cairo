@@ -2,7 +2,7 @@ use core::starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IAttenSysCourse<TContractState> {
-    fn create_course(ref self: TContractState, owner_: ContractAddress, accessment_: bool);
+    fn create_course(ref self: TContractState, owner_: ContractAddress, accessment_: bool, nft_name : ByteArray, nft_symbol: ByteArray, nft_uri: ByteArray)-> ContractAddress;
     fn add_replace_course_content(
         ref self: TContractState,
         course_identifier: u256,
@@ -30,9 +30,16 @@ pub trait IAttenSysCourse<TContractState> {
 
 //Todo, make a count of the total number of users that finished the course.
 
+#[starknet::interface]
+pub trait IAttenSysNft<TContractState> {
+    // NFT contract
+    fn mint(ref self: TContractState, recipient: ContractAddress, token_id: u256);
+}
+
 #[starknet::contract]
 mod AttenSysCourse {
-    use core::starknet::{ContractAddress, get_caller_address};
+    use super::IAttenSysNftDispatcherTrait;
+use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
         MutableVecTrait
@@ -54,6 +61,14 @@ mod AttenSysCourse {
         identifier_tracker: u256,
         //maps, creator's address to an array of struct of all courses created.
         creator_to_all_content: Map::<ContractAddress, Vec<Course>>,
+        //nft classhash
+          hash: ClassHash,
+        //admin address
+          admin : ContractAddress,
+        //saves nft contract address associated to event
+         course_nft_contract_address : Map::<u256, ContractAddress>,
+        //tracks all minted nft id minted by events
+         track_minted_nft_id : Map::<(u256, ContractAddress), u256>,
     }
     //find a way to keep track of all course identifiers for each owner.
     #[derive(Drop, Serde, starknet::Store)]
@@ -80,11 +95,14 @@ mod AttenSysCourse {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {}
+    fn constructor(ref self: ContractState, owner: ContractAddress, _hash: ClassHash) {
+        self.admin.write(owner);
+        self.hash.write(_hash);
+    }
     
     #[abi(embed_v0)]
     impl IAttenSysCourseImpl of super::IAttenSysCourse<ContractState> {
-        fn create_course(ref self: ContractState, owner_: ContractAddress, accessment_: bool) {
+        fn create_course(ref self: ContractState, owner_: ContractAddress, accessment_: bool, nft_name : ByteArray, nft_symbol: ByteArray, nft_uri: ByteArray) -> ContractAddress {
             //make an address zero check
             let identifier_count = self.identifier_tracker.read();
             let current_identifier = identifier_count + 1;
@@ -112,6 +130,17 @@ mod AttenSysCourse {
                 .entry(current_identifier)
                 .write(course_call_data);
             self.identifier_tracker.write(current_identifier);
+                          // constructor arguments   
+                          let mut constructor_args = array![];
+                          nft_uri.serialize(ref constructor_args);
+                          nft_name.serialize(ref constructor_args);
+                          nft_symbol.serialize(ref constructor_args);   
+                          //deploy contract
+                let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0, constructor_args.span(), false).expect('failed to deploy_syscall');
+            self.track_minted_nft_id.entry((current_identifier,deployed_contract_address)).write(1);
+            self.course_nft_contract_address.entry(current_identifier).write(deployed_contract_address);
+                
+                deployed_contract_address
         }
 
 
@@ -181,6 +210,13 @@ mod AttenSysCourse {
             //todo issue certification. (whitelist address)
             self.completion_status.entry((get_caller_address(), course_identifier)).write(true);
             self.completed_courses.entry(get_caller_address()).append().write(course_identifier);
+            let nft_contract_address = self.course_nft_contract_address.entry(course_identifier).read();
+            
+            let nft_dispatcher = super::IAttenSysNftDispatcher { contract_address: nft_contract_address };
+            
+            let nft_id = self.track_minted_nft_id.entry((course_identifier,nft_contract_address)).read();
+            nft_dispatcher.mint(get_caller_address(), nft_id);
+            self.track_minted_nft_id.entry((course_identifier,nft_contract_address)).write(nft_id + 1);
         }
 
 
