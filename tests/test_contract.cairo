@@ -1,7 +1,8 @@
 use starknet::{ContractAddress, contract_address_const,};
 // get_caller_address,
-use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address,start_cheat_block_timestamp_global};
-
+use snforge_std::{
+    declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global
+};
 
 
 // use attendsys::AttenSys::IAttenSysSafeDispatcher;
@@ -11,6 +12,9 @@ use attendsys::contracts::AttenSysCourse::IAttenSysCourseDispatcherTrait;
 
 use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcher;
 use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
+
+use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcher;
+use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
 
 #[starknet::interface]
@@ -24,11 +28,15 @@ pub trait IERC721<TContractState> {
         token_id: u256,
         data: Span<felt252>
     );
-    fn transfer_from(ref self: TContractState, from: ContractAddress, to: ContractAddress, token_id: u256);
+    fn transfer_from(
+        ref self: TContractState, from: ContractAddress, to: ContractAddress, token_id: u256
+    );
     fn approve(ref self: TContractState, to: ContractAddress, token_id: u256);
     fn set_approval_for_all(ref self: TContractState, operator: ContractAddress, approved: bool);
     fn get_approved(self: @TContractState, token_id: u256) -> ContractAddress;
-    fn is_approved_for_all(self: @TContractState, owner: ContractAddress, operator: ContractAddress) -> bool;
+    fn is_approved_for_all(
+        self: @TContractState, owner: ContractAddress, operator: ContractAddress
+    ) -> bool;
 
     // IERC721Metadata
     fn name(self: @TContractState) -> ByteArray;
@@ -43,7 +51,9 @@ pub trait IERC721<TContractState> {
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     let contract = declare(name).unwrap();
     let mut constuctor_arg = ArrayTrait::new();
-    let contract_owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let contract_owner_address: ContractAddress = contract_address_const::<
+        'contract_owner_address'
+    >();
     constuctor_arg.append(contract_owner_address.into());
     let (contract_address, _) = contract.deploy(@constuctor_arg).unwrap();
     contract_address
@@ -56,10 +66,9 @@ fn deploy_nft_contract(name: ByteArray) -> ContractAddress {
 
     let contract = declare(name).unwrap();
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-    
+
     contract_address
 }
-
 
 
 #[test]
@@ -173,7 +182,6 @@ fn test_reg_nd_mark() {
 }
 
 
-
 #[test]
 fn test_constructor() {
     let contract_address = deploy_nft_contract("AttenSysNft");
@@ -201,4 +209,17 @@ fn test_mint() {
     assert(erc721_token.balance_of(token_recipient) > 0, 'mint failed');
 }
 
+#[test]
+fn test_create_org_profile() {
+    let contract_address = deploy_contract("AttenSysOrg");
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    // let token_uri: ByteArray = "https://dummy_uri.com";
+    // let nft_name: ByteArray = "cairo";
+    // let nft_symb: ByteArray = "CAO";
+    dispatcher.create_org_profile(org_name, "web3", "web3", "web3");
+}
 

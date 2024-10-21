@@ -97,7 +97,7 @@ mod AttenSysEvent {
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {}
 
-    
+
     #[abi(embed_v0)]
     impl IAttenSysEventImpl of super::IAttenSysEvent<ContractState> {
         fn create_event(

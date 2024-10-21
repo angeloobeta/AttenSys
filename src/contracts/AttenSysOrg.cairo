@@ -1,8 +1,14 @@
-use core::starknet::ContractAddress;
+use core::starknet::{ContractAddress};
 
 #[starknet::interface]
 pub trait IAttenSysOrg<TContractState> {
-    fn create_org_profile(ref self: TContractState, org_name: felt252);
+    fn create_org_profile(
+        ref self: TContractState,
+        org_name: ByteArray,
+        nft_name: ByteArray,
+        nft_symbol: ByteArray,
+        nft_uri: ByteArray,
+    );
     fn add_instructor_to_org(ref self: TContractState, instructor: ContractAddress);
     fn create_a_class(ref self: TContractState, org_: ContractAddress);
     fn register_for_class(
@@ -11,7 +17,12 @@ pub trait IAttenSysOrg<TContractState> {
     fn mark_attendance_for_a_class(
         ref self: TContractState, org_: ContractAddress, instructor_: ContractAddress, class_id: u64
     );
-    fn batch_certify_students(ref self: TContractState, org_: ContractAddress, class_id: u64, students: Array<ContractAddress>);
+    fn batch_certify_students(
+        ref self: TContractState,
+        org_: ContractAddress,
+        class_id: u64,
+        students: Array<ContractAddress>
+    );
     fn get_org_instructors(
         self: @TContractState, org_: ContractAddress
     ) -> Array<AttenSysOrg::Instructor>;
@@ -35,12 +46,13 @@ pub trait IAttenSysOrg<TContractState> {
 //The contract
 #[starknet::contract]
 mod AttenSysOrg {
-    use core::starknet::{ContractAddress, get_caller_address};
+    use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
         MutableVecTrait
     };
     use core::num::traits::Zero;
+
 
     #[storage]
     struct Storage {
@@ -65,17 +77,20 @@ mod AttenSysOrg {
         //saves attendance status of students
         inst_student_status: Map<ContractAddress, Map<ContractAddress, bool>>,
         //cerified course, student ---> true
-        certify_student: Map::<(u64, ContractAddress), bool>
+        certify_student: Map::<(u64, ContractAddress), bool>,
+        //nft classhash
+        hash: ClassHash,
     }
 
     //find a way to keep track of all course identifiers for each owner.
-    #[derive(Drop, Copy, Serde, starknet::Store)]
+    #[derive(Drop, Serde, starknet::Store)]
     pub struct Organization {
         pub address_of_org: ContractAddress,
-        pub org_name: felt252,
+        pub org_name: ByteArray,
         pub number_of_instructors: u256,
         pub number_of_students: u256,
         pub number_of_all_classes: u256,
+        pub nft_address: ContractAddress,
     }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -99,29 +114,60 @@ mod AttenSysOrg {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {}
+    fn constructor(ref self: ContractState, owner: ContractAddress, class_hash: ClassHash) {
+        self.hash.write(class_hash);
+    }
 
     #[abi(embed_v0)]
     impl IAttenSysOrgImpl of super::IAttenSysOrg<ContractState> {
         //ability to create organization profile, each org info should be saved properly, use
         //mappings and structs where necessary
-        fn create_org_profile(ref self: ContractState, org_name: felt252) {
+        fn create_org_profile(
+            ref self: ContractState,
+            org_name: ByteArray,
+            nft_name: ByteArray,
+            nft_symbol: ByteArray,
+            nft_uri: ByteArray,
+        ) {
             //check that the caller address has an organization created before
             let creator = get_caller_address();
             let status: bool = self.created_status.entry(creator).read();
             if !status {
                 self.created_status.entry(creator).write(true);
 
+                // constructor arguments
+                let mut constructor_args = array![];
+                nft_name.serialize(ref constructor_args);
+                nft_symbol.serialize(ref constructor_args);
+                nft_uri.serialize(ref constructor_args);
+                //deploy contract
+                let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0,
+                constructor_args.span(), false).expect('failed to deploy_syscall');
+
                 // create organization and update to an address
                 let org_call_data: Organization = Organization {
                     address_of_org: creator,
-                    org_name: org_name,
+                    org_name: org_name.clone(),
                     number_of_instructors: 0,
                     number_of_students: 0,
                     number_of_all_classes: 0,
+                    nft_address: deployed_contract_address
                 };
+
                 self.all_org_info.append().write(org_call_data);
-                self.organization_info.entry(creator).write(org_call_data);
+                self
+                    .organization_info
+                    .entry(creator)
+                    .write(
+                        Organization {
+                            address_of_org: creator,
+                            org_name: org_name,
+                            number_of_instructors: 0,
+                            number_of_students: 0,
+                            number_of_all_classes: 0,
+                            nft_address: deployed_contract_address
+                        }
+                    );
             } else {
                 panic!("created an organization.");
             }
@@ -259,26 +305,30 @@ mod AttenSysOrg {
             self.student_attendance_status.entry((caller, class_id)).write(true);
         }
 
-        fn batch_certify_students(ref self: ContractState, org_: ContractAddress, class_id: u64, students: Array<ContractAddress>) {
+        fn batch_certify_students(
+            ref self: ContractState,
+            org_: ContractAddress,
+            class_id: u64,
+            students: Array<ContractAddress>
+        ) {
             //only instructor under an organization issues certificate
             //all of the registered students with attendance
             let caller = get_caller_address();
             let is_instructor = self.instructor_part_of_org.entry((org_, caller)).read();
-            let num_of_reg_student = self.org_instructor_classes
-            .entry((org_, caller))
-            .at(class_id)
-            .read().num_of_reg_students;
+            let num_of_reg_student = self
+                .org_instructor_classes
+                .entry((org_, caller))
+                .at(class_id)
+                .read()
+                .num_of_reg_students;
             assert(is_instructor, 'not an instructor');
             if num_of_reg_student > 0 {
-                for i in 0..num_of_reg_student {
-                    if self
-                    .inst_student_status
-                    .entry(caller)
-                    .entry(*students.at(i))
-                    .read() {
-                        self.certify_student.entry((class_id, *students.at(i))).write(true);
+                for i in 0
+                    ..num_of_reg_student {
+                        if self.inst_student_status.entry(caller).entry(*students.at(i)).read() {
+                            self.certify_student.entry((class_id, *students.at(i))).write(true);
+                        }
                     }
-                }
             }
         }
 

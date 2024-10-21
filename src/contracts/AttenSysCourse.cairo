@@ -81,7 +81,7 @@ mod AttenSysCourse {
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {}
-    
+
     #[abi(embed_v0)]
     impl IAttenSysCourseImpl of super::IAttenSysCourse<ContractState> {
         fn create_course(ref self: ContractState, owner_: ContractAddress, accessment_: bool) {
