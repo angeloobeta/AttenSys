@@ -137,9 +137,9 @@ mod AttenSysOrg {
 
                 // constructor arguments
                 let mut constructor_args = array![];
+                nft_uri.serialize(ref constructor_args);
                 nft_name.serialize(ref constructor_args);
                 nft_symbol.serialize(ref constructor_args);
-                nft_uri.serialize(ref constructor_args);
                 //deploy contract
                 let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0,
                 constructor_args.span(), false).expect('failed to deploy_syscall');

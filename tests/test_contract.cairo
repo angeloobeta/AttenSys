@@ -329,9 +329,9 @@ fn test_create_org_profile() {
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
-    // let token_uri: ByteArray = "https://dummy_uri.com";
-    // let nft_name: ByteArray = "cairo";
-    // let nft_symb: ByteArray = "CAO";
-    dispatcher.create_org_profile(org_name, "web3", "web3", "web3");
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let nft_name: ByteArray = "cairo";
+    let nft_symb: ByteArray = "CAO";
+    dispatcher.create_org_profile(org_name, token_uri, nft_name, nft_symb);
 }
 
