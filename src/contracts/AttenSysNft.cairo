@@ -32,8 +32,8 @@ mod AttenSysNft {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, base_uri: ByteArray) {
-        self.erc721.initializer("Attensys", "ASC", base_uri);
+    fn constructor(ref self: ContractState, base_uri: ByteArray, name: ByteArray, symbol: ByteArray) {
+        self.erc721.initializer(name, symbol, base_uri);
     }
 
     #[abi(embed_v0)]

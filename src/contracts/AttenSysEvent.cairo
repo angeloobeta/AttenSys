@@ -1,4 +1,6 @@
-use core::starknet::ContractAddress;
+use core::starknet::{ContractAddress};
+
+//to do : return the nft id and token uri in the get functions
 
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {
@@ -8,10 +10,13 @@ pub trait IAttenSysEvent<TContractState> {
         ref self: TContractState,
         owner_: ContractAddress,
         event_name: ByteArray,
+        nft_name: ByteArray,
+        nft_symbol: ByteArray,
         start_time_: u256,
         end_time_: u256,
-        reg_status: bool
-    );
+        reg_status: bool,
+        nft_uri : ByteArray,
+    )-> ContractAddress;
     fn end_event(ref self: TContractState, event_identifier: u256);
     fn batch_certify_attendees(ref self: TContractState, event_identifier: u256);
     fn mark_attendance(ref self: TContractState, event_identifier: u256);
@@ -31,14 +36,22 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_event_details(
         ref self: TContractState, event_identifier: u256
     ) -> AttenSysEvent::EventStruct;
+    fn get_event_nft_contract(ref self: TContractState, event_identifier : u256) -> ContractAddress;
     //(implementing a gasless transaction from frontend);
 //function to transfer event ownership
 //implement a feature to work on the passcode, save it when creating the event
 }
 
+#[starknet::interface]
+pub trait IAttenSysNft<TContractState> {
+    // NFT contract
+    fn mint(ref self: TContractState, recipient: ContractAddress, token_id: u256);
+}
+
 #[starknet::contract]
 mod AttenSysEvent {
-    use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp};
+    use super::IAttenSysNftDispatcherTrait;
+use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, ClassHash, syscalls::deploy_syscall};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
         MutableVecTrait
@@ -67,6 +80,14 @@ mod AttenSysEvent {
         registered: Map::<(ContractAddress, u256), bool>,
         //save the actual addresses that marked attendance
         all_attendance_marked_for_event: Map::<u256, Vec<ContractAddress>>,
+        //nft classhash
+        hash: ClassHash,
+        //admin address
+        admin : ContractAddress,
+        //saves nft contract address associated to event
+        event_nft_contract_address : Map::<u256, ContractAddress>,
+        //tracks all minted nft id minted by events
+        track_minted_nft_id : Map::<(u256, ContractAddress), u256>,
     }
 
     //create a separate struct for the all_attended_event that will only have the time the event
@@ -95,19 +116,26 @@ mod AttenSysEvent {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {}
-
-
+    fn constructor(ref self: ContractState, owner: ContractAddress, _hash: ClassHash ) {
+            self.admin.write(owner);
+            self.hash.write(_hash);
+    }
+    
+    const UDC_ADDRESS: felt252 = 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf;
+    
     #[abi(embed_v0)]
     impl IAttenSysEventImpl of super::IAttenSysEvent<ContractState> {
         fn create_event(
             ref self: ContractState,
             owner_: ContractAddress,
             event_name: ByteArray,
+            nft_name: ByteArray,
+            nft_symbol: ByteArray,
             start_time_: u256,
             end_time_: u256,
-            reg_status: bool
-        ) {
+            reg_status: bool,
+            nft_uri : ByteArray,
+        ) -> ContractAddress {
             let pre_existing_counter = self.event_identifier.read();
             let new_identifier = pre_existing_counter + 1;
 
@@ -123,6 +151,17 @@ mod AttenSysEvent {
                 registered_attendants: 0,
             };
 
+              // constructor arguments   
+              let mut constructor_args = array![];
+              nft_uri.serialize(ref constructor_args);
+              nft_name.serialize(ref constructor_args);
+              nft_symbol.serialize(ref constructor_args);   
+              //deploy contract
+            let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0, constructor_args.span(), false).expect('failed to deploy_syscall');
+            
+            
+            self.event_nft_contract_address.entry(new_identifier).write(deployed_contract_address);
+            
             self.all_event.append().write(event_call_data);
             self
                 .specific_event_with_identifier
@@ -138,6 +177,8 @@ mod AttenSysEvent {
                     }
                 );
             self.event_identifier.write(new_identifier);
+            self.track_minted_nft_id.entry((new_identifier,deployed_contract_address)).write(1);
+            deployed_contract_address
         }
 
         fn end_event(ref self: ContractState, event_identifier: u256) {
@@ -151,6 +192,7 @@ mod AttenSysEvent {
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
             //update attendance_status here
             if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
+                let nft_contract_address = self.event_nft_contract_address.entry(event_identifier).read();
                 for i in 0
                     ..self
                         .all_attendance_marked_for_event
@@ -169,7 +211,12 @@ mod AttenSysEvent {
                                     )
                                 )
                                 .write(true);
-                        }
+                        let nft_dispatcher = super::IAttenSysNftDispatcher { contract_address: nft_contract_address };
+            
+                        let nft_id = self.track_minted_nft_id.entry((event_identifier,nft_contract_address)).read();
+                        nft_dispatcher.mint(self.all_attendance_marked_for_event.entry(event_identifier).at(i).read(), nft_id);
+                        self.track_minted_nft_id.entry((event_identifier,nft_contract_address)).write(nft_id + 1);
+                    }
             }
         }
 
@@ -328,6 +375,9 @@ mod AttenSysEvent {
 
         fn get_event_details(ref self: ContractState, event_identifier: u256) -> EventStruct {
             self.specific_event_with_identifier.entry(event_identifier).read()
+        }
+        fn get_event_nft_contract(ref self: ContractState, event_identifier : u256) -> ContractAddress{
+                self.event_nft_contract_address.entry(event_identifier).read()
         }
     }
 
