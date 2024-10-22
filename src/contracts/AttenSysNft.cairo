@@ -5,6 +5,8 @@ pub trait IAttenSysNft<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, token_id: u256);
 }
 
+//to do make sure only org, event and orgs can call the mint function
+
 #[starknet::contract]
 mod AttenSysNft {
     use starknet::ContractAddress;

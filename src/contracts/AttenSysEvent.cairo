@@ -2,6 +2,8 @@ use core::starknet::{ContractAddress};
 
 //to do : return the nft id and token uri in the get functions
 
+//look into computing an hash passcode, pass it in as an argument (at the point of creating event), and make sure this hash can be confirmed.
+
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {
     //implement a paid event feature in the create_event & implement a register for event function
@@ -121,7 +123,7 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             self.hash.write(_hash);
     }
     
-    const UDC_ADDRESS: felt252 = 0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf;
+
     
     #[abi(embed_v0)]
     impl IAttenSysEventImpl of super::IAttenSysEvent<ContractState> {
