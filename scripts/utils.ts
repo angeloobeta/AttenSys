@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-export async function getCompiledCode(filenameA: string, filenameB: string, filenameC: string) {
+export async function getCompiledCode(filenameA: string, filenameB: string, filenameC: string, filenameD : string) {
     const AsierraFilePath = path.join(
     __dirname,
     `../target/dev/${filenameA}.contract_class.json`
@@ -30,6 +30,17 @@ export async function getCompiledCode(filenameA: string, filenameB: string, file
         );
     
     
+        
+        const DsierraFilePath = path.join(
+            __dirname,
+            `../target/dev/${filenameD}.contract_class.json`
+            );
+
+        const DcasmFilePath = path.join(
+            __dirname,
+            `../target/dev/${filenameD}.compiled_contract_class.json`
+            );
+    
     
     
     const codeA = [AsierraFilePath, AcasmFilePath].map(async (filePath) => {
@@ -54,7 +65,15 @@ export async function getCompiledCode(filenameA: string, filenameB: string, file
     });
     const [CsierraCode, CcasmCode] = await Promise.all(codeC);
 
+
+    const codeD = [DsierraFilePath, DcasmFilePath].map(async (filePath) => {
+        const file = await fs.readFile(filePath);
+        return JSON.parse(file.toString("ascii"));
+    });
+    const [DsierraCode, DcasmCode] = await Promise.all(codeD);
+
+
     return {
-        AsierraCode, AcasmCode, BsierraCode, BcasmCode, CsierraCode, CcasmCode
+        AsierraCode, AcasmCode, BsierraCode, BcasmCode, CsierraCode, CcasmCode,DsierraCode, DcasmCode 
     };
 }
