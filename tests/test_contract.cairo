@@ -335,3 +335,32 @@ fn test_create_org_profile() {
     dispatcher.create_org_profile(org_name, token_uri, nft_name, nft_symb);
 }
 
+#[test]
+fn test_add_instructor_to_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysOrg", hash);
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let nft_name: ByteArray = "cairo";
+    let nft_symb: ByteArray = "CAO";
+    dispatcher.create_org_profile(org_name, token_uri, nft_name, nft_symb);
+    dispatcher.add_instructor_to_org(instructor_address);
+}
+
+#[test]
+#[should_panic(expected: "no organization created.")]
+fn test_when_no_org_address_add_instructor_to_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysOrg", hash);
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, instructor_address);
+    dispatcher.add_instructor_to_org(instructor_address);
+}
+

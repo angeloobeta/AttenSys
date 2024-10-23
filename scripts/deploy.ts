@@ -111,7 +111,7 @@ async function main() {
    const OrgCallData = new CallData(CsierraCode.abi);
    const constructor_c = OrgCallData.compile("constructor", {
        owner: contract_owner,
-       _hash : nft_hash
+       class_hash : nft_hash
    });
 
    const orgdeployResponse = await account0.declareAndDeploy({
