@@ -29,7 +29,7 @@ pub trait IAttenSysCourse<TContractState> {
         self: @TContractState, owner_: ContractAddress
     ) -> Array<AttenSysCourse::Course>;
     fn get_creator_info(self: @TContractState, creator: ContractAddress) -> AttenSysCourse::Creator;
-    fn get_course_nft_contract(ref self: TContractState, course_identifier : u256) -> ContractAddress;
+    fn get_course_nft_contract(self: @TContractState, course_identifier : u256) -> ContractAddress;
 }
 
 //Todo, make a count of the total number of users that finished the course.
@@ -287,7 +287,7 @@ use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_sysca
         fn get_creator_info(self: @ContractState, creator: ContractAddress) -> Creator {
             self.course_creator_info.entry(creator).read()
         }
-        fn get_course_nft_contract(ref self: ContractState, course_identifier : u256) -> ContractAddress{
+        fn get_course_nft_contract(self: @ContractState, course_identifier : u256) -> ContractAddress{
             self.course_nft_contract_address.entry(course_identifier).read()
 
         }

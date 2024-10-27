@@ -25,20 +25,16 @@ pub trait IAttenSysEvent<TContractState> {
     fn register_for_event(ref self: TContractState, event_identifier: u256);
     // fn get_registered_users(ref self: TContractState, event_identifier : u256, passcode :
     // felt252) -> Array<ContractAddress>;
-    fn get_attendance_status(
-        ref self: TContractState, attendee: ContractAddress, event_identifier: u256
+    fn get_attendance_status(self: @TContractState, attendee: ContractAddress, event_identifier: u256
     ) -> bool;
-    fn get_all_attended_events(
-        ref self: TContractState, user: ContractAddress
+    fn get_all_attended_events(self: @TContractState, user: ContractAddress
     ) -> Array<AttenSysEvent::UserAttendedEventStruct>;
-    fn get_all_list_registered_events(
-        ref self: TContractState, user: ContractAddress
+    fn get_all_list_registered_events(self: @TContractState, user: ContractAddress
     ) -> Array<AttenSysEvent::UserAttendedEventStruct>;
     fn start_end_reg(ref self: TContractState, reg_stat: bool, event_identifier: u256);
-    fn get_event_details(
-        ref self: TContractState, event_identifier: u256
+    fn get_event_details(self: @TContractState, event_identifier: u256
     ) -> AttenSysEvent::EventStruct;
-    fn get_event_nft_contract(ref self: TContractState, event_identifier : u256) -> ContractAddress;
+    fn get_event_nft_contract(self: @TContractState, event_identifier : u256) -> ContractAddress;
     //(implementing a gasless transaction from frontend);
 //function to transfer event ownership
 //implement a feature to work on the passcode, save it when creating the event
@@ -56,8 +52,9 @@ mod AttenSysEvent {
 use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, ClassHash, syscalls::deploy_syscall};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
-        MutableVecTrait
+        MutableVecTrait,VecTrait
     };
+
 
     #[storage]
     struct Storage {
@@ -111,7 +108,7 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         pub end_time: u256,
     }
 
-    #[derive(Drop, Serde, starknet::Store)]
+    #[derive(Drop,Clone,Serde, starknet::Store)]
     pub struct UserAttendedEventStruct {
         pub event_name: ByteArray,
         pub time: u256,
@@ -305,16 +302,16 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         // }
 
         fn get_attendance_status(
-            ref self: ContractState, attendee: ContractAddress, event_identifier: u256
+            self: @ContractState, attendee: ContractAddress, event_identifier: u256
         ) -> bool {
             self.attendance_status.entry((attendee, event_identifier)).read()
         }
 
         fn get_all_attended_events(
-            ref self: ContractState, user: ContractAddress
+            self: @ContractState, user: ContractAddress
         ) -> Array<UserAttendedEventStruct> {
-            let mut arr = array![];
             let vec = self.all_attended_event.entry(user);
+            let mut arr = array![];
             let len = vec.len();
             let mut i: u64 = 0;
 
@@ -332,7 +329,7 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         }
 
         fn get_all_list_registered_events(
-            ref self: ContractState, user: ContractAddress
+            self: @ContractState, user: ContractAddress
         ) -> Array<UserAttendedEventStruct> {
             let mut arr = array![];
             let vec = self.all_registered_event_by_user.entry(user);
@@ -375,10 +372,10 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             }
         }
 
-        fn get_event_details(ref self: ContractState, event_identifier: u256) -> EventStruct {
+        fn get_event_details(self: @ContractState, event_identifier: u256) -> EventStruct {
             self.specific_event_with_identifier.entry(event_identifier).read()
         }
-        fn get_event_nft_contract(ref self: ContractState, event_identifier : u256) -> ContractAddress{
+        fn get_event_nft_contract(self: @ContractState, event_identifier : u256) -> ContractAddress{
                 self.event_nft_contract_address.entry(event_identifier).read()
         }
     }
