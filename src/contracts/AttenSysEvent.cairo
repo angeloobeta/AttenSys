@@ -1,8 +1,8 @@
 use core::starknet::{ContractAddress};
 
-//to do : return the nft id and token uri in the get functions
+//@todo : return the nft id and token uri in the get functions
 
-//look into computing an hash passcode, pass it in as an argument (at the point of creating event), and make sure this hash can be confirmed.
+//@todo look into computing an hash passcode, pass it in as an argument (at the point of creating event), and make sure this hash can be confirmed.
 
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {
@@ -12,18 +12,16 @@ pub trait IAttenSysEvent<TContractState> {
         ref self: TContractState,
         owner_: ContractAddress,
         event_name: ByteArray,
-        nft_name: ByteArray,
-        nft_symbol: ByteArray,
+        base_uri: ByteArray, name_: ByteArray, symbol: ByteArray,
         start_time_: u256,
         end_time_: u256,
         reg_status: bool,
-        nft_uri : ByteArray,
     )-> ContractAddress;
     fn end_event(ref self: TContractState, event_identifier: u256);
     fn batch_certify_attendees(ref self: TContractState, event_identifier: u256);
     fn mark_attendance(ref self: TContractState, event_identifier: u256);
     fn register_for_event(ref self: TContractState, event_identifier: u256);
-    // fn get_registered_users(ref self: TContractState, event_identifier : u256, passcode :
+    //@todo fn get_registered_users(ref self: TContractState, event_identifier : u256, passcode :
     // felt252) -> Array<ContractAddress>;
     fn get_attendance_status(self: @TContractState, attendee: ContractAddress, event_identifier: u256
     ) -> bool;
@@ -35,9 +33,9 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_event_details(self: @TContractState, event_identifier: u256
     ) -> AttenSysEvent::EventStruct;
     fn get_event_nft_contract(self: @TContractState, event_identifier : u256) -> ContractAddress;
-    //(implementing a gasless transaction from frontend);
-//function to transfer event ownership
-//implement a feature to work on the passcode, save it when creating the event
+    //@todo (implementing a gasless transaction from frontend);
+//@todo function to transfer event ownership
+//@todo implement a feature to work on the passcode, save it when creating the event
 }
 
 #[starknet::interface]
@@ -128,12 +126,10 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             ref self: ContractState,
             owner_: ContractAddress,
             event_name: ByteArray,
-            nft_name: ByteArray,
-            nft_symbol: ByteArray,
+            base_uri: ByteArray, name_: ByteArray, symbol: ByteArray,
             start_time_: u256,
             end_time_: u256,
             reg_status: bool,
-            nft_uri : ByteArray,
         ) -> ContractAddress {
             let pre_existing_counter = self.event_identifier.read();
             let new_identifier = pre_existing_counter + 1;
@@ -152,11 +148,12 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
 
               // constructor arguments   
               let mut constructor_args = array![];
-              nft_uri.serialize(ref constructor_args);
-              nft_name.serialize(ref constructor_args);
-              nft_symbol.serialize(ref constructor_args);   
+              base_uri.serialize(ref constructor_args);
+              name_.serialize(ref constructor_args);
+              symbol.serialize(ref constructor_args);   
+              let contract_address_salt : felt252 = new_identifier.try_into().unwrap();
               //deploy contract
-            let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0, constructor_args.span(), false).expect('failed to deploy_syscall');
+            let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), contract_address_salt, constructor_args.span(), false).expect('failed to deploy_syscall');
             
             
             self.event_nft_contract_address.entry(new_identifier).write(deployed_contract_address);
@@ -296,7 +293,7 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             self.all_registered_event_by_user.entry(get_caller_address()).append().write(call_data);
         }
 
-        // fn get_registered_users(ref self: ContractState, event_identifier : u256, passcode :
+        //@todo fn get_registered_users(ref self: ContractState, event_identifier : u256, passcode :
         // felt252 ) -> Array<ContractAddress>{
 
         // }

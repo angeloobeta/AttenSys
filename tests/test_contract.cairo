@@ -223,8 +223,7 @@ fn test_create_event() {
     let nft_name = "onlydust";
     let nft_symb = "OD";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_event(owner_address, event_name.clone(), nft_name, nft_symb, 2238493, 32989989, true,token_uri);
-    
+    dispatcher.create_event(owner_address, event_name.clone(),token_uri, nft_name, nft_symb, 2238493, 32989989, true);
     let event_details_check = dispatcher.get_event_details(1);
     assert(event_details_check.event_name == event_name, 'wrong_name');
     assert(event_details_check.time.registration_open == true, 'not set');
@@ -237,7 +236,7 @@ fn test_create_event() {
     let event_name_two = "web2";
     let nft_name_two = "web3bridge";
     let nft_symb_two = "wb3";
-    dispatcher.create_event(owner_address_two, event_name_two.clone(),nft_name_two, nft_symb_two, 2238493, 32989989, true, token_uri_two);
+    dispatcher.create_event(owner_address_two, event_name_two.clone(),token_uri_two,nft_name_two, nft_symb_two, 2238493, 32989989, true);
 
     let event_details_check_two = dispatcher.get_event_details(2);
     assert(event_details_check_two.event_name == event_name_two, 'wrong_name');
@@ -259,7 +258,7 @@ fn test_reg_nd_mark() {
     let nft_name = "onlydust";
     let nft_symb = "OD";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_event(owner_address, event_name.clone(), nft_name, nft_symb, 223, 329, true,token_uri);
+    dispatcher.create_event(owner_address, event_name.clone(),token_uri, nft_name, nft_symb, 223, 329, true);
 
     start_cheat_block_timestamp_global(55555);
     start_cheat_caller_address(contract_address, attendee1_address);
