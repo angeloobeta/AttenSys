@@ -33,6 +33,7 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_event_details(self: @TContractState, event_identifier: u256
     ) -> AttenSysEvent::EventStruct;
     fn get_event_nft_contract(self: @TContractState, event_identifier : u256) -> ContractAddress;
+    fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
     //@todo (implementing a gasless transaction from frontend);
 //@todo function to transfer event ownership
 //@todo implement a feature to work on the passcode, save it when creating the event
@@ -375,6 +376,15 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         fn get_event_nft_contract(self: @ContractState, event_identifier : u256) -> ContractAddress{
                 self.event_nft_contract_address.entry(event_identifier).read()
         }
+        
+        fn get_all_events(self: @ContractState) -> Array<EventStruct>{
+            let mut arr = array![];
+            for i in 0..self.all_event.len() {
+                arr.append(self.all_event.at(i).read());
+            };
+            arr
+        }
+
     }
 
     #[generate_trait]

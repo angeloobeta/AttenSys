@@ -93,15 +93,15 @@ fn test_create_course() {
     let nft_name_a = "cairo";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a,token_uri_a);
-    dispatcher.create_course(owner_address, true, nft_name_b, nft_symb_b,token_uri_b);
+    dispatcher.create_course(owner_address, true,token_uri_a, nft_name_a, nft_symb_a);
+    dispatcher.create_course(owner_address, true,token_uri_b, nft_name_b, nft_symb_b);
     
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
     let nft_name = "cairo";
     let nft_symb = "CAO";
     //call again
     start_cheat_caller_address(contract_address, owner_address_two);
-    dispatcher.create_course(owner_address_two, true, nft_name, nft_symb,token_uri);
+    dispatcher.create_course(owner_address_two, true,token_uri, nft_name, nft_symb);
     let creator_courses = dispatcher.get_all_creator_courses(owner_address);
     let creator_courses_two = dispatcher.get_all_creator_courses(owner_address_two);
     let creator_info = dispatcher.get_creator_info(owner_address);
@@ -137,15 +137,15 @@ fn test_finish_course_n_claim() {
     let nft_name_a = "cairo_a";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a,token_uri_a);
-    dispatcher.create_course(owner_address, true, nft_name_b, nft_symb_b,token_uri_b);
+    dispatcher.create_course(owner_address, true,token_uri_a, nft_name_a, nft_symb_a);
+    dispatcher.create_course(owner_address, true,token_uri_b, nft_name_b, nft_symb_b);
     
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
     let nft_name = "cairo_c";
     let nft_symb = "CAO";
     //call again
     start_cheat_caller_address(contract_address, owner_address_two);
-    dispatcher.create_course(owner_address_two, true, nft_name, nft_symb,token_uri);
+    dispatcher.create_course(owner_address_two, true,token_uri, nft_name, nft_symb);
 
     start_cheat_caller_address(contract_address, viewer1_address);
     dispatcher.finish_course_claim_certification(1);
