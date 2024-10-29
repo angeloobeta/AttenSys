@@ -2,10 +2,9 @@ use core::starknet::ContractAddress;
 
 //to do : return the nft id and token uri in the get function
 
-
 #[starknet::interface]
 pub trait IAttenSysCourse<TContractState> {
-    fn create_course(ref self: TContractState, owner_: ContractAddress, accessment_: bool, nft_name : ByteArray, nft_symbol: ByteArray, nft_uri: ByteArray)-> ContractAddress;
+    fn create_course(ref self: TContractState, owner_: ContractAddress, accessment_: bool, base_uri: ByteArray, name_: ByteArray, symbol: ByteArray)-> ContractAddress;
     fn add_replace_course_content(
         ref self: TContractState,
         course_identifier: u256,
@@ -29,7 +28,7 @@ pub trait IAttenSysCourse<TContractState> {
         self: @TContractState, owner_: ContractAddress
     ) -> Array<AttenSysCourse::Course>;
     fn get_creator_info(self: @TContractState, creator: ContractAddress) -> AttenSysCourse::Creator;
-    fn get_course_nft_contract(ref self: TContractState, course_identifier : u256) -> ContractAddress;
+    fn get_course_nft_contract(self: @TContractState, course_identifier: u256) -> ContractAddress;
 }
 
 //Todo, make a count of the total number of users that finished the course.
@@ -43,7 +42,7 @@ pub trait IAttenSysNft<TContractState> {
 #[starknet::contract]
 mod AttenSysCourse {
     use super::IAttenSysNftDispatcherTrait;
-use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash};
+    use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
         MutableVecTrait
@@ -66,13 +65,13 @@ use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_sysca
         //maps, creator's address to an array of struct of all courses created.
         creator_to_all_content: Map::<ContractAddress, Vec<Course>>,
         //nft classhash
-          hash: ClassHash,
+        hash: ClassHash,
         //admin address
-          admin : ContractAddress,
+        admin: ContractAddress,
         //saves nft contract address associated to event
-         course_nft_contract_address : Map::<u256, ContractAddress>,
+        course_nft_contract_address: Map::<u256, ContractAddress>,
         //tracks all minted nft id minted by events
-         track_minted_nft_id : Map::<(u256, ContractAddress), u256>,
+        track_minted_nft_id: Map::<(u256, ContractAddress), u256>,
     }
     //find a way to keep track of all course identifiers for each owner.
     #[derive(Drop, Serde, starknet::Store)]
@@ -103,10 +102,10 @@ use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_sysca
         self.admin.write(owner);
         self.hash.write(_hash);
     }
-    
+
     #[abi(embed_v0)]
     impl IAttenSysCourseImpl of super::IAttenSysCourse<ContractState> {
-        fn create_course(ref self: ContractState, owner_: ContractAddress, accessment_: bool, nft_name : ByteArray, nft_symbol: ByteArray, nft_uri: ByteArray) -> ContractAddress {
+        fn create_course(ref self: ContractState, owner_: ContractAddress, accessment_: bool, base_uri: ByteArray, name_: ByteArray, symbol: ByteArray) -> ContractAddress {
             //make an address zero check
             let identifier_count = self.identifier_tracker.read();
             let current_identifier = identifier_count + 1;
@@ -136,11 +135,13 @@ use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_sysca
             self.identifier_tracker.write(current_identifier);
                           // constructor arguments   
                           let mut constructor_args = array![];
-                          nft_uri.serialize(ref constructor_args);
-                          nft_name.serialize(ref constructor_args);
-                          nft_symbol.serialize(ref constructor_args);   
+                          base_uri.serialize(ref constructor_args);
+                          name_.serialize(ref constructor_args);
+                          symbol.serialize(ref constructor_args); 
+              let contract_address_salt : felt252 = current_identifier.try_into().unwrap();
+
                           //deploy contract
-                let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0, constructor_args.span(), false).expect('failed to deploy_syscall');
+            let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), contract_address_salt, constructor_args.span(), false).expect('failed to deploy_syscall');
             self.track_minted_nft_id.entry((current_identifier,deployed_contract_address)).write(1);
             self.course_nft_contract_address.entry(current_identifier).write(deployed_contract_address);
                 
@@ -214,13 +215,24 @@ use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_sysca
             //todo issue certification. (whitelist address)
             self.completion_status.entry((get_caller_address(), course_identifier)).write(true);
             self.completed_courses.entry(get_caller_address()).append().write(course_identifier);
-            let nft_contract_address = self.course_nft_contract_address.entry(course_identifier).read();
-            
-            let nft_dispatcher = super::IAttenSysNftDispatcher { contract_address: nft_contract_address };
-            
-            let nft_id = self.track_minted_nft_id.entry((course_identifier,nft_contract_address)).read();
+            let nft_contract_address = self
+                .course_nft_contract_address
+                .entry(course_identifier)
+                .read();
+
+            let nft_dispatcher = super::IAttenSysNftDispatcher {
+                contract_address: nft_contract_address
+            };
+
+            let nft_id = self
+                .track_minted_nft_id
+                .entry((course_identifier, nft_contract_address))
+                .read();
             nft_dispatcher.mint(get_caller_address(), nft_id);
-            self.track_minted_nft_id.entry((course_identifier,nft_contract_address)).write(nft_id + 1);
+            self
+                .track_minted_nft_id
+                .entry((course_identifier, nft_contract_address))
+                .write(nft_id + 1);
         }
 
 
@@ -287,13 +299,11 @@ use core::starknet::{ContractAddress, get_caller_address, syscalls::deploy_sysca
         fn get_creator_info(self: @ContractState, creator: ContractAddress) -> Creator {
             self.course_creator_info.entry(creator).read()
         }
-        fn get_course_nft_contract(ref self: ContractState, course_identifier : u256) -> ContractAddress{
+        fn get_course_nft_contract(
+            self: @ContractState, course_identifier: u256
+        ) -> ContractAddress {
             self.course_nft_contract_address.entry(course_identifier).read()
-
         }
     }
 }
-
-
-
 

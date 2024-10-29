@@ -1,8 +1,9 @@
 use core::starknet::{ContractAddress};
 
-//to do : return the nft id and token uri in the get functions
+//@todo : return the nft id and token uri in the get functions
 
-//look into computing an hash passcode, pass it in as an argument (at the point of creating event), and make sure this hash can be confirmed.
+//@todo look into computing an hash passcode, pass it in as an argument (at the point of creating
+//event), and make sure this hash can be confirmed.
 
 #[starknet::interface]
 pub trait IAttenSysEvent<TContractState> {
@@ -12,36 +13,37 @@ pub trait IAttenSysEvent<TContractState> {
         ref self: TContractState,
         owner_: ContractAddress,
         event_name: ByteArray,
-        nft_name: ByteArray,
-        nft_symbol: ByteArray,
+        base_uri: ByteArray,
+        name_: ByteArray,
+        symbol: ByteArray,
         start_time_: u256,
         end_time_: u256,
         reg_status: bool,
-        nft_uri : ByteArray,
-    )-> ContractAddress;
+    ) -> ContractAddress;
     fn end_event(ref self: TContractState, event_identifier: u256);
     fn batch_certify_attendees(ref self: TContractState, event_identifier: u256);
     fn mark_attendance(ref self: TContractState, event_identifier: u256);
     fn register_for_event(ref self: TContractState, event_identifier: u256);
-    // fn get_registered_users(ref self: TContractState, event_identifier : u256, passcode :
+    //@todo fn get_registered_users(ref self: TContractState, event_identifier : u256, passcode :
     // felt252) -> Array<ContractAddress>;
     fn get_attendance_status(
-        ref self: TContractState, attendee: ContractAddress, event_identifier: u256
+        self: @TContractState, attendee: ContractAddress, event_identifier: u256
     ) -> bool;
     fn get_all_attended_events(
-        ref self: TContractState, user: ContractAddress
+        self: @TContractState, user: ContractAddress
     ) -> Array<AttenSysEvent::UserAttendedEventStruct>;
     fn get_all_list_registered_events(
-        ref self: TContractState, user: ContractAddress
+        self: @TContractState, user: ContractAddress
     ) -> Array<AttenSysEvent::UserAttendedEventStruct>;
     fn start_end_reg(ref self: TContractState, reg_stat: bool, event_identifier: u256);
     fn get_event_details(
-        ref self: TContractState, event_identifier: u256
+        self: @TContractState, event_identifier: u256
     ) -> AttenSysEvent::EventStruct;
-    fn get_event_nft_contract(ref self: TContractState, event_identifier : u256) -> ContractAddress;
-    //(implementing a gasless transaction from frontend);
-//function to transfer event ownership
-//implement a feature to work on the passcode, save it when creating the event
+    fn get_event_nft_contract(self: @TContractState, event_identifier : u256) -> ContractAddress;
+    fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
+    //@todo (implementing a gasless transaction from frontend);
+//@todo function to transfer event ownership
+//@todo implement a feature to work on the passcode, save it when creating the event
 }
 
 #[starknet::interface]
@@ -53,11 +55,15 @@ pub trait IAttenSysNft<TContractState> {
 #[starknet::contract]
 mod AttenSysEvent {
     use super::IAttenSysNftDispatcherTrait;
-use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, ClassHash, syscalls::deploy_syscall};
+    use core::starknet::{
+        ContractAddress, get_caller_address, get_block_timestamp, ClassHash,
+        syscalls::deploy_syscall
+    };
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
-        MutableVecTrait
+        MutableVecTrait, VecTrait
     };
+
 
     #[storage]
     struct Storage {
@@ -85,11 +91,11 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         //nft classhash
         hash: ClassHash,
         //admin address
-        admin : ContractAddress,
+        admin: ContractAddress,
         //saves nft contract address associated to event
-        event_nft_contract_address : Map::<u256, ContractAddress>,
+        event_nft_contract_address: Map::<u256, ContractAddress>,
         //tracks all minted nft id minted by events
-        track_minted_nft_id : Map::<(u256, ContractAddress), u256>,
+        track_minted_nft_id: Map::<(u256, ContractAddress), u256>,
     }
 
     //create a separate struct for the all_attended_event that will only have the time the event
@@ -111,32 +117,31 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         pub end_time: u256,
     }
 
-    #[derive(Drop, Serde, starknet::Store)]
+    #[derive(Drop, Clone, Serde, starknet::Store)]
     pub struct UserAttendedEventStruct {
         pub event_name: ByteArray,
         pub time: u256,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress, _hash: ClassHash ) {
-            self.admin.write(owner);
-            self.hash.write(_hash);
+    fn constructor(ref self: ContractState, owner: ContractAddress, _hash: ClassHash) {
+        self.admin.write(owner);
+        self.hash.write(_hash);
     }
-    
 
-    
+
     #[abi(embed_v0)]
     impl IAttenSysEventImpl of super::IAttenSysEvent<ContractState> {
         fn create_event(
             ref self: ContractState,
             owner_: ContractAddress,
             event_name: ByteArray,
-            nft_name: ByteArray,
-            nft_symbol: ByteArray,
+            base_uri: ByteArray,
+            name_: ByteArray,
+            symbol: ByteArray,
             start_time_: u256,
             end_time_: u256,
             reg_status: bool,
-            nft_uri : ByteArray,
         ) -> ContractAddress {
             let pre_existing_counter = self.event_identifier.read();
             let new_identifier = pre_existing_counter + 1;
@@ -153,17 +158,20 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
                 registered_attendants: 0,
             };
 
-              // constructor arguments   
-              let mut constructor_args = array![];
-              nft_uri.serialize(ref constructor_args);
-              nft_name.serialize(ref constructor_args);
-              nft_symbol.serialize(ref constructor_args);   
-              //deploy contract
-            let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0, constructor_args.span(), false).expect('failed to deploy_syscall');
-            
-            
+            // constructor arguments
+            let mut constructor_args = array![];
+            base_uri.serialize(ref constructor_args);
+            name_.serialize(ref constructor_args);
+            symbol.serialize(ref constructor_args);
+            let contract_address_salt: felt252 = new_identifier.try_into().unwrap();
+            //deploy contract
+            let (deployed_contract_address, _) = deploy_syscall(
+                self.hash.read(), contract_address_salt, constructor_args.span(), false
+            )
+                .expect('failed to deploy_syscall');
+
             self.event_nft_contract_address.entry(new_identifier).write(deployed_contract_address);
-            
+
             self.all_event.append().write(event_call_data);
             self
                 .specific_event_with_identifier
@@ -179,7 +187,7 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
                     }
                 );
             self.event_identifier.write(new_identifier);
-            self.track_minted_nft_id.entry((new_identifier,deployed_contract_address)).write(1);
+            self.track_minted_nft_id.entry((new_identifier, deployed_contract_address)).write(1);
             deployed_contract_address
         }
 
@@ -194,7 +202,10 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
             //update attendance_status here
             if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
-                let nft_contract_address = self.event_nft_contract_address.entry(event_identifier).read();
+                let nft_contract_address = self
+                    .event_nft_contract_address
+                    .entry(event_identifier)
+                    .read();
                 for i in 0
                     ..self
                         .all_attendance_marked_for_event
@@ -213,12 +224,28 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
                                     )
                                 )
                                 .write(true);
-                        let nft_dispatcher = super::IAttenSysNftDispatcher { contract_address: nft_contract_address };
-            
-                        let nft_id = self.track_minted_nft_id.entry((event_identifier,nft_contract_address)).read();
-                        nft_dispatcher.mint(self.all_attendance_marked_for_event.entry(event_identifier).at(i).read(), nft_id);
-                        self.track_minted_nft_id.entry((event_identifier,nft_contract_address)).write(nft_id + 1);
-                    }
+                            let nft_dispatcher = super::IAttenSysNftDispatcher {
+                                contract_address: nft_contract_address
+                            };
+
+                            let nft_id = self
+                                .track_minted_nft_id
+                                .entry((event_identifier, nft_contract_address))
+                                .read();
+                            nft_dispatcher
+                                .mint(
+                                    self
+                                        .all_attendance_marked_for_event
+                                        .entry(event_identifier)
+                                        .at(i)
+                                        .read(),
+                                    nft_id
+                                );
+                            self
+                                .track_minted_nft_id
+                                .entry((event_identifier, nft_contract_address))
+                                .write(nft_id + 1);
+                        }
             }
         }
 
@@ -299,22 +326,22 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             self.all_registered_event_by_user.entry(get_caller_address()).append().write(call_data);
         }
 
-        // fn get_registered_users(ref self: ContractState, event_identifier : u256, passcode :
+        //@todo fn get_registered_users(ref self: ContractState, event_identifier : u256, passcode :
         // felt252 ) -> Array<ContractAddress>{
 
         // }
 
         fn get_attendance_status(
-            ref self: ContractState, attendee: ContractAddress, event_identifier: u256
+            self: @ContractState, attendee: ContractAddress, event_identifier: u256
         ) -> bool {
             self.attendance_status.entry((attendee, event_identifier)).read()
         }
 
         fn get_all_attended_events(
-            ref self: ContractState, user: ContractAddress
+            self: @ContractState, user: ContractAddress
         ) -> Array<UserAttendedEventStruct> {
-            let mut arr = array![];
             let vec = self.all_attended_event.entry(user);
+            let mut arr = array![];
             let len = vec.len();
             let mut i: u64 = 0;
 
@@ -332,7 +359,7 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
         }
 
         fn get_all_list_registered_events(
-            ref self: ContractState, user: ContractAddress
+            self: @ContractState, user: ContractAddress
         ) -> Array<UserAttendedEventStruct> {
             let mut arr = array![];
             let vec = self.all_registered_event_by_user.entry(user);
@@ -375,12 +402,21 @@ use core::starknet::{ContractAddress, get_caller_address, get_block_timestamp, C
             }
         }
 
-        fn get_event_details(ref self: ContractState, event_identifier: u256) -> EventStruct {
+        fn get_event_details(self: @ContractState, event_identifier: u256) -> EventStruct {
             self.specific_event_with_identifier.entry(event_identifier).read()
         }
-        fn get_event_nft_contract(ref self: ContractState, event_identifier : u256) -> ContractAddress{
-                self.event_nft_contract_address.entry(event_identifier).read()
+        fn get_event_nft_contract(self: @ContractState, event_identifier: u256) -> ContractAddress {
+            self.event_nft_contract_address.entry(event_identifier).read()
         }
+        
+        fn get_all_events(self: @ContractState) -> Array<EventStruct>{
+            let mut arr = array![];
+            for i in 0..self.all_event.len() {
+                arr.append(self.all_event.at(i).read());
+            };
+            arr
+        }
+
     }
 
     #[generate_trait]

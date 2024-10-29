@@ -29,7 +29,7 @@ async function main() {
     console.log("Account connected.\n");
 
   
-     let AsierraCode, AcasmCode, BsierraCode, BcasmCode, CsierraCode, CcasmCode, DsierraCode, DcasmCode ;
+     let AsierraCode, AcasmCode, BsierraCode, BcasmCode, CsierraCode, CcasmCode, DsierraCode: any, DcasmCode: any ;
     
      try {
         ({ AsierraCode, AcasmCode, BsierraCode, BcasmCode, CsierraCode, CcasmCode, DsierraCode, DcasmCode  } = await getCompiledCode(
@@ -40,29 +40,37 @@ async function main() {
         console.log(error);
         process.exit(1);
     }
-    const contract_owner = "0x64b48806902a367c8598f4f95c305e8c1a1acba5f082d294a43793113115691"
+    const contract_owner = "0x05a679d1e0d9f67370d8c3250388afec2da1deaf895b51841e017a3eb7bfd154"
 
-    console.log("deploying nft contract......\n")
-    //for nft 
-    const NftCallData = new CallData(DsierraCode.abi);
-    const constructor_d = NftCallData.compile("constructor", {
-        base_uri: "https://dummy_uri.com/your_id",
-        name : "attensys",
-        symbol : "ats",
-    });
+    console.log("nft contract declared......\n")
     
-    const nftdeployResponse = await account0.declareAndDeploy({
-        contract: DsierraCode,
-        casm: DcasmCode,
-        constructorCalldata: constructor_d,
-        salt: stark.randomAddress(),
-    });
+    // async function declareAndGetClassHash() {
+    //     // Initialize provider and account
+    //     const account = new Account(provider, accountAddress0, privateKey0);
+      
+    //     // Read the compiled contract JSON
+      
+    //     // Declare the contract
+    //     const { transaction_hash, class_hash } = await account.declare({
+    //         contract: DsierraCode,
+    //         casm: DcasmCode,
+    //         classHash: undefined // Set to undefined to let Starknet compute it
+    //     });
+      
+    //     // Wait for the transaction to be accepted
+    //     await provider.waitForTransaction(transaction_hash);
+      
+    //     return class_hash;
+    //   }
 
-    const nft_hash = nftdeployResponse.declare.class_hash
+    // const nft_hash = (await declareAndGetClassHash()).toString;
+    // console.log(nft_hash)
+
+
+    const nft_hash = "0x0102b3f7e66131f95d7520fdda526329f2fb23b93a7c8f33c2e375dfeab77615"
     
     console.log("deploying attensys course.....\n");
-    
-    
+
     //for course 
     const CourseCallData = new CallData(AsierraCode.abi);
     const constructor_a = CourseCallData.compile("constructor", {
@@ -111,7 +119,7 @@ async function main() {
    const OrgCallData = new CallData(CsierraCode.abi);
    const constructor_c = OrgCallData.compile("constructor", {
        owner: contract_owner,
-       _hash : nft_hash
+       class_hash : nft_hash
    });
 
    const orgdeployResponse = await account0.declareAndDeploy({
