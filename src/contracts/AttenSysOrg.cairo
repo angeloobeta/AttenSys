@@ -41,6 +41,9 @@ pub trait IAttenSysOrg<TContractState> {
     fn get_student_classes(
         self: @TContractState, student: ContractAddress
     ) -> Array<AttenSysOrg::Class>;
+    fn get_instructor_part_of_org(
+        self: @TContractState, instructor: ContractAddress
+    ) -> bool;
 }
 
 //The contract
@@ -141,8 +144,11 @@ mod AttenSysOrg {
                 nft_name.serialize(ref constructor_args);
                 nft_symbol.serialize(ref constructor_args);
                 //deploy contract
-                let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), 0,
-                constructor_args.span(), false).expect('failed to deploy_syscall');
+                let contract_address_salt: felt252 = creator.into();
+                let (deployed_contract_address, _) = deploy_syscall(
+                    self.hash.read(), contract_address_salt, constructor_args.span(), false
+                )
+                    .expect('failed to deploy_syscall');
 
                 // create organization and update to an address
                 let org_call_data: Organization = Organization {
@@ -191,6 +197,7 @@ mod AttenSysOrg {
                         .entry(caller)
                         .read();
                     org_call_data.number_of_instructors += 1;
+                    self.organization_info.entry(caller).write(org_call_data);
                 } else {
                     panic!("already added.");
                 }
@@ -215,6 +222,7 @@ mod AttenSysOrg {
                 // update all general classes linked to org
                 let mut org: Organization = self.organization_info.entry(org_).read();
                 org.number_of_all_classes += 1;
+                self.organization_info.entry(org_).write(org);
             } else {
                 panic!("not an instructor in this org");
             }
@@ -272,8 +280,14 @@ mod AttenSysOrg {
                                 // update organization and instructor data
                                 let mut org = self.organization_info.entry(org_).read();
                                 org.number_of_students += 1;
+                                self.organization_info.entry(org_).write(org);
                                 //update instructor class info
                                 instructor_class.num_of_reg_students += 1;
+                                self
+                                    .org_instructor_classes
+                                    .entry((org_, instructor_))
+                                    .at(class_id)
+                                    .write(instructor_class);
                                 self
                                     .inst_student_status
                                     .entry(instructor_)
@@ -433,6 +447,14 @@ mod AttenSysOrg {
         fn get_student_info(self: @ContractState, student_: ContractAddress) -> Student {
             let mut student_info: Student = self.student_info.entry(student_).read();
             student_info
+        }
+
+        fn get_instructor_part_of_org(
+            self: @ContractState, instructor: ContractAddress
+        ) -> bool {
+            let creator = get_caller_address();
+           let isTrue = self.instructor_part_of_org.entry((creator, instructor)).read();
+            return isTrue;
         }
     }
 }
