@@ -95,15 +95,15 @@ fn test_create_course() {
     let nft_name_a = "cairo";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true,token_uri_a, nft_name_a, nft_symb_a);
-    dispatcher.create_course(owner_address, true,token_uri_b, nft_name_b, nft_symb_b);
-    
+    dispatcher.create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a);
+    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b);
+
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
     let nft_name = "cairo";
     let nft_symb = "CAO";
     //call again
     start_cheat_caller_address(contract_address, owner_address_two);
-    dispatcher.create_course(owner_address_two, true,token_uri, nft_name, nft_symb);
+    dispatcher.create_course(owner_address_two, true, token_uri, nft_name, nft_symb);
     let creator_courses = dispatcher.get_all_creator_courses(owner_address);
     let creator_courses_two = dispatcher.get_all_creator_courses(owner_address_two);
     let creator_info = dispatcher.get_creator_info(owner_address);
@@ -139,15 +139,15 @@ fn test_finish_course_n_claim() {
     let nft_name_a = "cairo_a";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true,token_uri_a, nft_name_a, nft_symb_a);
-    dispatcher.create_course(owner_address, true,token_uri_b, nft_name_b, nft_symb_b);
-    
+    dispatcher.create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a);
+    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b);
+
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
     let nft_name = "cairo_c";
     let nft_symb = "CAO";
     //call again
     start_cheat_caller_address(contract_address, owner_address_two);
-    dispatcher.create_course(owner_address_two, true,token_uri, nft_name, nft_symb);
+    dispatcher.create_course(owner_address_two, true, token_uri, nft_name, nft_symb);
 
     start_cheat_caller_address(contract_address, viewer1_address);
     dispatcher.finish_course_claim_certification(1);
@@ -351,10 +351,11 @@ fn test_create_org_profile() {
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
-    let token_uri: ByteArray = "https://dummy_uri.com";
-    let nft_name: ByteArray = "cairo";
-    let nft_symb: ByteArray = "CAO";
-    dispatcher.create_org_profile(org_name, token_uri, nft_name, nft_symb);
+    // let token_uri: ByteArray = "https://dummy_uri.com";
+    // let nft_name: ByteArray = "cairo";
+    // let nft_symb: ByteArray = "CAO";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name, org_ipfs_uri);
 }
 
 #[test]
@@ -367,13 +368,44 @@ fn test_add_instructor_to_org() {
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
-    let token_uri: ByteArray = "https://dummy_uri.com";
-    let nft_name: ByteArray = "cairo";
-    let nft_symb: ByteArray = "CAO";
-    dispatcher.create_org_profile(org_name, token_uri, nft_name, nft_symb);
+    // let token_uri: ByteArray = "https://dummy_uri.com";
+    // let nft_name: ByteArray = "cairo";
+    // let nft_symb: ByteArray = "CAO";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name, org_ipfs_uri);
     dispatcher.add_instructor_to_org(instructor_address);
     let org = dispatcher.get_org_info(owner_address);
     assert_eq!(org.number_of_instructors, 1);
+}
+
+fn test_create_bootcamp_for_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysOrg", hash);
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    dispatcher.add_instructor_to_org(owner_address);
+    dispatcher.add_instructor_to_org(instructor_address);
+    let org = dispatcher.get_org_info(owner_address);
+    assert_eq!(org.number_of_instructors, 2);
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let nft_name: ByteArray = "cairo";
+    let nft_symb: ByteArray = "CAO";
+
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+        );
+    assert_eq!(org.number_of_all_bootcamps, 1);
+    assert_eq!(org.number_of_all_classes, 3);
 }
 
 #[test]

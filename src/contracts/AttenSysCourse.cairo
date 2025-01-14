@@ -4,7 +4,14 @@ use core::starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IAttenSysCourse<TContractState> {
-    fn create_course(ref self: TContractState, owner_: ContractAddress, accessment_: bool, base_uri: ByteArray, name_: ByteArray, symbol: ByteArray)-> ContractAddress;
+    fn create_course(
+        ref self: TContractState,
+        owner_: ContractAddress,
+        accessment_: bool,
+        base_uri: ByteArray,
+        name_: ByteArray,
+        symbol: ByteArray
+    ) -> ContractAddress;
     fn add_replace_course_content(
         ref self: TContractState,
         course_identifier: u256,
@@ -105,7 +112,14 @@ mod AttenSysCourse {
 
     #[abi(embed_v0)]
     impl IAttenSysCourseImpl of super::IAttenSysCourse<ContractState> {
-        fn create_course(ref self: ContractState, owner_: ContractAddress, accessment_: bool, base_uri: ByteArray, name_: ByteArray, symbol: ByteArray) -> ContractAddress {
+        fn create_course(
+            ref self: ContractState,
+            owner_: ContractAddress,
+            accessment_: bool,
+            base_uri: ByteArray,
+            name_: ByteArray,
+            symbol: ByteArray
+        ) -> ContractAddress {
             //make an address zero check
             let identifier_count = self.identifier_tracker.read();
             let current_identifier = identifier_count + 1;
@@ -133,19 +147,28 @@ mod AttenSysCourse {
                 .entry(current_identifier)
                 .write(course_call_data);
             self.identifier_tracker.write(current_identifier);
-                          // constructor arguments   
-                          let mut constructor_args = array![];
-                          base_uri.serialize(ref constructor_args);
-                          name_.serialize(ref constructor_args);
-                          symbol.serialize(ref constructor_args); 
-              let contract_address_salt : felt252 = current_identifier.try_into().unwrap();
+            // constructor arguments
+            let mut constructor_args = array![];
+            base_uri.serialize(ref constructor_args);
+            name_.serialize(ref constructor_args);
+            symbol.serialize(ref constructor_args);
+            let contract_address_salt: felt252 = current_identifier.try_into().unwrap();
 
-                          //deploy contract
-            let (deployed_contract_address, _) = deploy_syscall(self.hash.read(), contract_address_salt, constructor_args.span(), false).expect('failed to deploy_syscall');
-            self.track_minted_nft_id.entry((current_identifier,deployed_contract_address)).write(1);
-            self.course_nft_contract_address.entry(current_identifier).write(deployed_contract_address);
-                
-                deployed_contract_address
+            //deploy contract
+            let (deployed_contract_address, _) = deploy_syscall(
+                self.hash.read(), contract_address_salt, constructor_args.span(), false
+            )
+                .expect('failed to deploy_syscall');
+            self
+                .track_minted_nft_id
+                .entry((current_identifier, deployed_contract_address))
+                .write(1);
+            self
+                .course_nft_contract_address
+                .entry(current_identifier)
+                .write(deployed_contract_address);
+
+            deployed_contract_address
         }
 
 
