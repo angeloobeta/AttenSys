@@ -400,11 +400,12 @@ fn test_create_bootcamp_for_org() {
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
 
-    dispatcher.create_bootcamp(org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri);
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+        );
     assert_eq!(org.number_of_all_bootcamps, 1);
     assert_eq!(org.number_of_all_classes, 3);
-
-    
 }
 
 #[test]

@@ -14,7 +14,7 @@ pub trait IAttenSysOrg<TContractState> {
         num_of_class_to_create: u256,
         bootcamp_ipfs_uri: ByteArray
     );
-    // fn create_a_class(ref self: TContractState, org_: ContractAddress);
+    fn add_active_meet_link(ref self: TContractState, meet_link: ByteArray, bootcamp_id: u64,);
     fn register_for_class(
         ref self: TContractState, org_: ContractAddress, instructor_: ContractAddress, class_id: u64
     );
@@ -39,9 +39,6 @@ pub trait IAttenSysOrg<TContractState> {
     fn get_org_info(self: @TContractState, org_: ContractAddress) -> AttenSysOrg::Organization;
     fn get_all_org_info(self: @TContractState) -> Array<AttenSysOrg::Organization>;
     fn get_student_info(self: @TContractState, student_: ContractAddress) -> AttenSysOrg::Student;
-    fn retrieve_all_class_of_instructors(
-        self: @TContractState, org_: ContractAddress, instructor: Array<ContractAddress>
-    ) -> Array<AttenSysOrg::Class>;
     fn get_student_classes(
         self: @TContractState, student: ContractAddress
     ) -> Array<AttenSysOrg::Class>;
@@ -110,7 +107,8 @@ mod AttenSysOrg {
         pub number_of_students: u256,
         pub number_of_all_bootcamp_classes: u256,
         pub nft_address: ContractAddress,
-        pub bootcamp_ipfs_uri: ByteArray
+        pub bootcamp_ipfs_uri: ByteArray,
+        pub active_meet_link: ByteArray
     }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -182,7 +180,7 @@ mod AttenSysOrg {
                 panic!("created an organization.");
             }
         }
-        // organizations can instructor profile
+        // add instructor to an organization
         fn add_instructor_to_org(ref self: ContractState, instructor: ContractAddress) {
             assert(!instructor.is_zero(), 'zero address.');
             let caller = get_caller_address();
@@ -245,7 +243,8 @@ mod AttenSysOrg {
                     number_of_students: 0,
                     number_of_all_bootcamp_classes: num_of_class_to_create,
                     nft_address: deployed_contract_address,
-                    bootcamp_ipfs_uri: bootcamp_ipfs_uri.clone()
+                    bootcamp_ipfs_uri: bootcamp_ipfs_uri.clone(),
+                    active_meet_link: ""
                 };
 
                 //append into the array of bootcamps associated to an organization
@@ -258,15 +257,28 @@ mod AttenSysOrg {
                 org_call_data.number_of_all_classes += num_of_class_to_create;
                 self.organization_info.entry(caller).write(org_call_data);
 
-                
                 //create classes
-                    create_a_class(ref self, caller, num_of_class_to_create, index);
+                create_a_class(ref self, caller, num_of_class_to_create, index);
             } else {
                 panic!("no organization created.");
             }
         }
 
-       
+        fn add_active_meet_link(ref self: ContractState, meet_link: ByteArray, bootcamp_id: u64,) {
+            let caller = get_caller_address();
+            let status: bool = self.created_status.entry(caller).read();
+            // confirm that the caller is associated an organization
+            if (status) {
+                let mut bootcamp: Bootcamp = self
+                    .org_to_bootcamps
+                    .entry(caller)
+                    .at(bootcamp_id)
+                    .read();
+                bootcamp.active_meet_link = meet_link;
+            } else {
+                panic!("no organization created.");
+            };
+        }
 
         fn register_for_class(
             ref self: ContractState,
@@ -449,31 +461,6 @@ mod AttenSysOrg {
             arr_of_all_created_classes
         }
 
-        fn retrieve_all_class_of_instructors(
-            self: @ContractState, org_: ContractAddress, instructor: Array<ContractAddress>
-        ) -> Array<Class> {
-            // let len: u32 = instructor.len().try_into().unwrap();
-            let mut arr = array![];
-            // let mut i: u32 = 0;
-            // let mut j: u32 = 0;
-
-            // loop {
-            //     if i >= len {
-            //         break;
-            //     }
-            //     if let element = self
-            //         .org_instructor_classes
-            //         .entry(org_, instructor.get(i))
-            //          {
-            //         arr.append(element);
-            //         i += 1;
-            //         j += 1;
-            //     };
-            // };
-            //@todo retrieve all classes from providing an array of instructors
-            arr
-        }
-
         fn get_student_classes(self: @ContractState, student: ContractAddress) -> Array<Class> {
             let mut arr = array![];
             for i in 0
@@ -541,7 +528,12 @@ mod AttenSysOrg {
         }
     }
 
-    fn create_a_class(ref self: ContractState, org_: ContractAddress, num_of_class_to_create: u256, bootcamp_id: u64) {
+    fn create_a_class(
+        ref self: ContractState,
+        org_: ContractAddress,
+        num_of_class_to_create: u256,
+        bootcamp_id: u64
+    ) {
         let caller = get_caller_address();
         let status: bool = self.instructor_part_of_org.entry((org_, caller)).read();
         // check if an instructor is associated to an organization
