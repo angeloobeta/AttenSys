@@ -368,9 +368,6 @@ fn test_add_instructor_to_org() {
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
-    // let token_uri: ByteArray = "https://dummy_uri.com";
-    // let nft_name: ByteArray = "cairo";
-    // let nft_symb: ByteArray = "CAO";
     let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
     dispatcher.create_org_profile(org_name, org_ipfs_uri);
     dispatcher.add_instructor_to_org(instructor_address);
@@ -378,6 +375,32 @@ fn test_add_instructor_to_org() {
     assert_eq!(org.number_of_instructors, 1);
 }
 
+#[test]
+fn test_remove_instructor_from_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysOrg", hash);
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+    let instructor_address2: ContractAddress = contract_address_const::<'instructor2'>();
+    let instructor_address3: ContractAddress = contract_address_const::<'instructor3'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name, org_ipfs_uri);
+    dispatcher.add_instructor_to_org(instructor_address);
+    dispatcher.add_instructor_to_org(instructor_address2);
+    dispatcher.add_instructor_to_org(instructor_address3);
+    let org = dispatcher.get_org_info(owner_address);
+    assert_eq!(org.number_of_instructors, 3);
+    dispatcher.remove_instructor_from_org(instructor_address3);
+    let newOrg = dispatcher.get_org_info(owner_address);
+    assert_eq!(newOrg.number_of_instructors, 2);
+    
+}
+
+#[test]
 fn test_create_bootcamp_for_org() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let contract_address = deploy_contract("AttenSysOrg", hash);
@@ -404,9 +427,45 @@ fn test_create_bootcamp_for_org() {
         .create_bootcamp(
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
-    assert_eq!(org.number_of_all_bootcamps, 1);
-    assert_eq!(org.number_of_all_classes, 3);
+        let updatedOrg = dispatcher.get_org_info(owner_address);
+    assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
+    assert_eq!(updatedOrg.number_of_all_classes, 3);
 }
+
+#[test]
+fn test_add_active_meet_link_to_bootcamp() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysOrg", hash);
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    dispatcher.add_instructor_to_org(owner_address);
+    dispatcher.add_instructor_to_org(instructor_address);
+    let org = dispatcher.get_org_info(owner_address);
+    assert_eq!(org.number_of_instructors, 2);
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let nft_name: ByteArray = "cairo";
+    let nft_symb: ByteArray = "CAO";
+
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+        );
+
+    // possible to override active meet link.
+    dispatcher.add_active_meet_link("https:meet.google.com/hgf-snbh-snh", 0, false, owner_address);
+    dispatcher.add_active_meet_link("https:meet.google.com/shd-snag-qro", 0, false, owner_address);
+    dispatcher.add_active_meet_link("https:meet.google.com/mna-xbbh-snh", 0, true, owner_address);
+}
+
 
 #[test]
 #[should_panic(expected: "no organization created.")]

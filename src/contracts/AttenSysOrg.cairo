@@ -4,6 +4,7 @@ use core::starknet::{ContractAddress};
 pub trait IAttenSysOrg<TContractState> {
     fn create_org_profile(ref self: TContractState, org_name: ByteArray, org_ipfs_uri: ByteArray);
     fn add_instructor_to_org(ref self: TContractState, instructor: ContractAddress);
+    fn remove_instructor_from_org(ref self: TContractState, instructor: ContractAddress);
     fn create_bootcamp(
         ref self: TContractState,
         org_name: ByteArray,
@@ -14,7 +15,19 @@ pub trait IAttenSysOrg<TContractState> {
         num_of_class_to_create: u256,
         bootcamp_ipfs_uri: ByteArray
     );
-    fn add_active_meet_link(ref self: TContractState, meet_link: ByteArray, bootcamp_id: u64,);
+    fn add_active_meet_link(
+        ref self: TContractState,
+        meet_link: ByteArray,
+        bootcamp_id: u64,
+        is_instructor: bool,
+        org_address: ContractAddress
+    );
+    fn add_uploaded_video_link(
+        ref self: TContractState,
+        video_link: ByteArray,
+        is_instructor: bool,
+        org_address: ContractAddress
+    );
     fn register_for_class(
         ref self: TContractState, org_: ContractAddress, instructor_: ContractAddress, class_id: u64
     );
@@ -68,6 +81,8 @@ mod AttenSysOrg {
         org_to_instructors: Map::<ContractAddress, Vec<Instructor>>,
         // save bootcamps of org in an array
         org_to_bootcamps: Map::<ContractAddress, Vec<Bootcamp>>,
+        // org to uploaded ipfs video links
+        org_to_uploaded_videos_link: Map::<ContractAddress, Vec<ByteArray>>,
         //validate that an instructor is associated to an org
         instructor_part_of_org: Map::<(ContractAddress, ContractAddress), bool>,
         //maps org and instructor to classes
@@ -113,7 +128,7 @@ mod AttenSysOrg {
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
     pub struct Instructor {
-        pub address_of_org: ContractAddress,
+        pub address_of_instructor: ContractAddress,
         pub num_of_classes: u256,
     }
 
@@ -191,7 +206,7 @@ mod AttenSysOrg {
                     self.instructor_part_of_org.entry((caller, instructor)).write(true);
 
                     let mut instructor_data: Instructor = Instructor {
-                        address_of_org: instructor, num_of_classes: 0,
+                        address_of_instructor: instructor, num_of_classes: 0,
                     };
                     self.org_to_instructors.entry(caller).append().write(instructor_data);
                     let mut org_call_data: Organization = self
@@ -206,6 +221,85 @@ mod AttenSysOrg {
             } else {
                 panic!("no organization created.");
             }
+        }
+
+        //    remove instructor from an organization.
+        fn remove_instructor_from_org(ref self: ContractState, instructor: ContractAddress) {
+            assert(!instructor.is_zero(), 'zero address.');
+            let caller = get_caller_address();
+            let status: bool = self.created_status.entry(caller).read();
+            // confirm that the caller is associated an organization
+            if status {
+                if self.instructor_part_of_org.entry((caller, instructor)).read() {
+                    self.instructor_part_of_org.entry((caller, instructor)).write(false);
+
+                    let mut org_call_data: Organization = self
+                        .organization_info
+                        .entry(caller)
+                        .read();
+                    org_call_data.number_of_instructors -= 1;
+                    self.organization_info.entry(caller).write(org_call_data);
+                    let instructors_in_org = self.org_to_instructors.entry(caller);
+
+                    // let mut addresses : Vec<Instructor> = array![];
+                    for i in 0
+                        ..instructors_in_org
+                            .len() {
+                                let derived_instructor = self
+                                    .org_to_instructors
+                                    .entry(caller)
+                                    .at(i)
+                                    .read()
+                                    .address_of_instructor;
+
+                                if instructor == derived_instructor {
+                                    // replace the last guy in the spot of the removed instructor
+                                   let lastInstructor = self
+                                        .org_to_instructors
+                                        .entry(caller).at(instructors_in_org.len() - 1).read();
+                                    self
+                                    .org_to_instructors
+                                    .entry(caller).at(i).write(lastInstructor);
+                                }
+                            }
+                } else {
+                    panic!("not an instructor.");
+                }
+            } else {
+                panic!("no organization created.");
+            }
+        }
+
+        //Add function to allow saving URI's from recorded video #33
+        // Add function to allow organization to save the uri obtained from uploading recorded video
+        // to ipfs in contract
+        fn add_uploaded_video_link(
+            ref self: ContractState,
+            video_link: ByteArray,
+            is_instructor: bool,
+            org_address: ContractAddress
+        ) {
+            assert(video_link != "", 'empty link');
+            let mut status: bool = false;
+            let caller = get_caller_address();
+
+            if is_instructor {
+                status = self.instructor_part_of_org.entry((org_address, caller)).read();
+            } else {
+                assert(org_address == caller, 'caller not org address');
+                status = self.created_status.entry(caller).read();
+            }
+
+            // confirm that the caller is associated an organization
+            if (status) {
+                if is_instructor {
+                    self.org_to_uploaded_videos_link.entry(org_address).append().write(video_link);
+                } else {
+                    self.org_to_uploaded_videos_link.entry(caller).append().write(video_link);
+                }
+            } else {
+                panic!("not part of organization.");
+            };
         }
 
         fn create_bootcamp(
@@ -241,7 +335,7 @@ mod AttenSysOrg {
                     bootcamp_name: bootcamp_name.clone(),
                     number_of_instructors: 0,
                     number_of_students: 0,
-                    number_of_all_bootcamp_classes: num_of_class_to_create,
+                    number_of_all_bootcamp_classes: 0,
                     nft_address: deployed_contract_address,
                     bootcamp_ipfs_uri: bootcamp_ipfs_uri.clone(),
                     active_meet_link: ""
@@ -254,7 +348,6 @@ mod AttenSysOrg {
                 // update the number of bootcamps created in an organization
                 let mut org_call_data: Organization = self.organization_info.entry(caller).read();
                 org_call_data.number_of_all_bootcamps += 1;
-                org_call_data.number_of_all_classes += num_of_class_to_create;
                 self.organization_info.entry(caller).write(org_call_data);
 
                 //create classes
@@ -264,19 +357,42 @@ mod AttenSysOrg {
             }
         }
 
-        fn add_active_meet_link(ref self: ContractState, meet_link: ByteArray, bootcamp_id: u64,) {
+        fn add_active_meet_link(
+            ref self: ContractState,
+            meet_link: ByteArray,
+            bootcamp_id: u64,
+            is_instructor: bool,
+            org_address: ContractAddress
+        ) {
+            let mut status: bool = false;
             let caller = get_caller_address();
-            let status: bool = self.created_status.entry(caller).read();
+
+            if is_instructor {
+                status = self.instructor_part_of_org.entry((org_address, caller)).read();
+            } else {
+                assert(org_address == caller, 'caller not org address');
+                status = self.created_status.entry(caller).read();
+            }
+
             // confirm that the caller is associated an organization
             if (status) {
-                let mut bootcamp: Bootcamp = self
-                    .org_to_bootcamps
-                    .entry(caller)
-                    .at(bootcamp_id)
-                    .read();
-                bootcamp.active_meet_link = meet_link;
+                if is_instructor {
+                    let mut bootcamp: Bootcamp = self
+                        .org_to_bootcamps
+                        .entry(org_address)
+                        .at(bootcamp_id)
+                        .read();
+                    bootcamp.active_meet_link = meet_link;
+                } else {
+                    let mut bootcamp: Bootcamp = self
+                        .org_to_bootcamps
+                        .entry(caller)
+                        .at(bootcamp_id)
+                        .read();
+                    bootcamp.active_meet_link = meet_link;
+                }
             } else {
-                panic!("no organization created.");
+                panic!("not part of organization.");
             };
         }
 
@@ -433,7 +549,9 @@ mod AttenSysOrg {
                                             .entry(
                                                 (
                                                     *arr_of_org.at(i_u32).address_of_org,
-                                                    *arr_of_instructors.at(j_u32).address_of_org
+                                                    *arr_of_instructors
+                                                        .at(j_u32)
+                                                        .address_of_instructor
                                                 )
                                             )
                                             .len() {
@@ -448,7 +566,7 @@ mod AttenSysOrg {
                                                                         .address_of_org,
                                                                     *arr_of_instructors
                                                                         .at(j_u32)
-                                                                        .address_of_org
+                                                                        .address_of_instructor
                                                                 )
                                                             )
                                                             .at(k)
