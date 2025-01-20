@@ -41,9 +41,7 @@ pub trait IAttenSysEvent<TContractState> {
     ) -> AttenSysEvent::EventStruct;
     fn get_event_nft_contract(self: @TContractState, event_identifier: u256) -> ContractAddress;
     fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
-    //@todo (implementing a gasless transaction from frontend);
 //@todo function to transfer event ownership
-//@todo implement a feature to work on the passcode, save it when creating the event
 }
 
 #[starknet::interface]
