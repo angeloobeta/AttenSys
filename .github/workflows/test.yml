@@ -1,0 +1,33 @@
+name: Test
+
+on: 
+  [push, pull_request]
+
+env:
+  SCARB_VERSION: 2.8.4
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the code from the repository
+      - uses: actions/checkout@v3
+
+      # Step 2: Set up ScarB with a specific version
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: ${{ env.SCARB_VERSION }}
+
+      # Step 3: Set up Snfoundry
+      - uses: foundry-rs/setup-snfoundry@v2
+        with:
+          starknet-foundry-version: 0.27.0
+
+      # Step 4: Install Universal Sierra Compiler
+      - name: Install Universal Sierra Compiler
+        run: |
+          curl -L https://raw.githubusercontent.com/software-mansion/universal-sierra-compiler/master/scripts/install.sh | sh
+
+      # Step 5: Run Cairo tests
+      - name: Run cairo tests
+        run: snforge test
