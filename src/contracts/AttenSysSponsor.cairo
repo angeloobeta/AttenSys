@@ -29,9 +29,7 @@ mod AttenSysSponsor {
     use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
     use super::ContractAddress;
     use starknet::{get_caller_address, get_contract_address};
-    use core::starknet::storage::{
-        Map
-    };
+    use core::starknet::storage::{Map};
 
     #[storage]
     struct Storage {
@@ -41,7 +39,11 @@ mod AttenSysSponsor {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, organization_contract_address: ContractAddress, event_contract_address: ContractAddress) {
+    fn constructor(
+        ref self: ContractState,
+        organization_contract_address: ContractAddress,
+        event_contract_address: ContractAddress
+    ) {
         assert(!organization_contract_address.is_zero(), 'zero address.');
         assert(!event_contract_address.is_zero(), 'zero address.');
         self.attenSysOrganization.write(organization_contract_address);
@@ -51,15 +53,15 @@ mod AttenSysSponsor {
 
     #[abi(embed_v0)]
     impl AttenSysSponsorImpl of super::IAttenSysSponsor<ContractState> {
-        
         fn deposit(ref self: ContractState, token_address: ContractAddress, amount: u256) {
             let caller = get_caller_address();
-            assert(caller == self.attenSysOrganization.read() || caller == self.attenSysEvent.read(), 'not an expected caller.');
+            assert(
+                caller == self.attenSysOrganization.read() || caller == self.attenSysEvent.read(),
+                'not an expected caller.'
+            );
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             let has_transferred = token_dispatcher
-                .transferFrom(
-                    sender: caller, recipient: get_contract_address(), amount: amount
-                );
+                .transferFrom(sender: caller, recipient: get_contract_address(), amount: amount);
 
             if has_transferred {
                 self.balances.write(token_address, self.balances.read(token_address) + amount)
@@ -68,12 +70,14 @@ mod AttenSysSponsor {
 
         fn withdraw(ref self: ContractState, token_address: ContractAddress, amount: u256) {
             let caller = get_caller_address();
-            assert(caller == self.attenSysOrganization.read() || caller == self.attenSysEvent.read(), 'not an expected caller.');
+            assert(
+                caller == self.attenSysOrganization.read() || caller == self.attenSysEvent.read(),
+                'not an expected caller.'
+            );
             let contract_token_balance = self.balances.read(token_address);
             assert(amount <= contract_token_balance, 'Not enough balance');
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-            let has_transferred = token_dispatcher
-                .transfer(recipient: caller, amount: amount);
+            let has_transferred = token_dispatcher.transfer(recipient: caller, amount: amount);
 
             if has_transferred {
                 self.balances.write(token_address, self.balances.read(token_address) - amount)
