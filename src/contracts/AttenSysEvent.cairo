@@ -41,8 +41,6 @@ pub trait IAttenSysEvent<TContractState> {
     ) -> AttenSysEvent::EventStruct;
     fn get_event_nft_contract(self: @TContractState, event_identifier: u256) -> ContractAddress;
     fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
-//@todo function to transfer event ownership
-
     fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
 }
 
