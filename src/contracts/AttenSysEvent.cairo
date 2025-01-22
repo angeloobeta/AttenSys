@@ -42,6 +42,7 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_event_nft_contract(self: @TContractState, event_identifier: u256) -> ContractAddress;
     fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
     fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
+    fn claim_admin_ownership(ref self: TContractState);
 }
 
 #[starknet::interface]
@@ -90,6 +91,8 @@ mod AttenSysEvent {
         hash: ClassHash,
         //admin address
         admin: ContractAddress,
+        // address of intended new admin
+        intended_new_admin: ContractAddress,
         //saves nft contract address associated to event
         event_nft_contract_address: Map::<u256, ContractAddress>,
         //tracks all minted nft id minted by events
@@ -419,7 +422,14 @@ mod AttenSysEvent {
             assert(new_admin != self.zero_address(), 'zero address not allowed');
             assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
 
-            self.admin.write(new_admin);
+            self.intended_new_admin.write(new_admin);
+        }
+
+        fn claim_admin_ownership(ref self: ContractState) {
+            assert(get_caller_address() == self.intended_new_admin.read(), 'unauthorized caller');
+
+            self.admin.write(self.intended_new_admin.read());
+            self.intended_new_admin.write(self.zero_address());
         }
     }
 
