@@ -42,6 +42,8 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_event_nft_contract(self: @TContractState, event_identifier: u256) -> ContractAddress;
     fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
 //@todo function to transfer event ownership
+
+    fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
 }
 
 #[starknet::interface]
@@ -55,7 +57,7 @@ mod AttenSysEvent {
     use super::IAttenSysNftDispatcherTrait;
     use core::starknet::{
         ContractAddress, get_caller_address, get_block_timestamp, ClassHash,
-        syscalls::deploy_syscall
+        syscalls::deploy_syscall, contract_address_const
     };
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec,
@@ -414,6 +416,13 @@ mod AttenSysEvent {
             };
             arr
         }
+
+        fn transfer_admin(ref self: ContractState, new_admin: ContractAddress) {
+            assert(new_admin != self.zero_address(), 'zero address not allowed');
+            assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
+
+            self.admin.write(new_admin);
+        }
     }
 
     #[generate_trait]
@@ -441,6 +450,10 @@ mod AttenSysEvent {
                             }
                         }
             }
+        }
+
+        fn zero_address(self: @ContractState) -> ContractAddress {
+            contract_address_const::<0>()
         }
     }
 }
