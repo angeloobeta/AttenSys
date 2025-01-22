@@ -43,6 +43,8 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_all_events(self: @TContractState) -> Array<AttenSysEvent::EventStruct>;
     fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
     fn claim_admin_ownership(ref self: TContractState);
+    fn get_admin(self: @TContractState) -> ContractAddress;
+    fn get_new_admin(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::interface]
@@ -430,6 +432,14 @@ mod AttenSysEvent {
 
             self.admin.write(self.intended_new_admin.read());
             self.intended_new_admin.write(self.zero_address());
+        }
+
+        fn get_admin(self: @ContractState) -> ContractAddress {
+            self.admin.read()
+        }
+
+        fn get_new_admin(self: @ContractState) -> ContractAddress {
+            self.intended_new_admin.read()
         }
     }
 
