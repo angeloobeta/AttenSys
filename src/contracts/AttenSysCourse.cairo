@@ -40,6 +40,7 @@ pub trait IAttenSysCourse<TContractState> {
     fn claim_admin_ownership(ref self: TContractState);
     fn get_admin(self: @TContractState) -> ContractAddress;
     fn get_new_admin(self: @TContractState) -> ContractAddress;
+    fn get_total_course_completions(self: @TContractState, course_identifier: u256) -> u256;
 }
 
 //Todo, make a count of the total number of users that finished the course.
