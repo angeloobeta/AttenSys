@@ -91,10 +91,14 @@ pub trait IAttenSysOrg<TContractState> {
     ) -> AttenSysOrg::Bootcamp;
 }
 
+// Events
+
+
 //The contract
 #[starknet::contract]
 mod AttenSysOrg {
-    use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall};
+    use starknet::event::EventEmitter;
+use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
         MutableVecTrait
@@ -205,7 +209,9 @@ mod AttenSysOrg {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         Sponsor: Sponsor,
-        Withdrawn: Withdrawn
+        Withdrawn: Withdrawn,
+        OrganizationProfile: OrganizationProfile,
+        InstructorAddedToOrg: InstructorAddedToOrg
     }
 
     #[derive(Drop, starknet::Event)]
@@ -221,6 +227,22 @@ mod AttenSysOrg {
         pub amt: u256,
         #[key]
         pub organization: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct OrganizationProfile{
+        pub org_name: ByteArray,    
+        pub org_ipfs_uri: ByteArray,
+    //     #[key]
+    //     pub organization: ContractAddress
+    // }
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct InstructorAddedToOrg{
+        org_name: ByteArray,
+        #[key]
+        instructor_addr: ContractAddress
     }
 
     #[constructor]
@@ -278,6 +300,12 @@ mod AttenSysOrg {
                             total_sponsorship_fund: 0,
                         }
                     );
+               let orginization_name = org_name.clone();
+               let uri = org_name.clone();
+                self.emit(OrganizationProfile {
+                     org_name: orginization_name,
+                     org_ipfs_uri:  uri}
+                    );
                 // add the organization creator as an instructor
                 add_instructor_to_org(ref self, creator, creator, org_name);
             } else {
@@ -299,6 +327,7 @@ mod AttenSysOrg {
                             add_instructor_to_org(
                                 ref self, caller, *instructor[i], org_name.clone()
                             );
+                            self.emit( InstructorAddedToOrg { org_name: org_name.clone(), instructor_addr: caller.clone()})
                         }
             } else {
                 panic!("no organization created.");
