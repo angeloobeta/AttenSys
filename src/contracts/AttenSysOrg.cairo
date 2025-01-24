@@ -211,7 +211,9 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
         Sponsor: Sponsor,
         Withdrawn: Withdrawn,
         OrganizationProfile: OrganizationProfile,
-        InstructorAddedToOrg: InstructorAddedToOrg
+        InstructorAddedToOrg: InstructorAddedToOrg,
+        InstructorRemovedFromOrg: InstructorRemovedFromOrg,
+        BootCampCreated: BootCampCreated
     }
 
     #[derive(Drop, starknet::Event)]
@@ -244,6 +246,20 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
         #[key]
         instructor_addr: ContractAddress
     }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct InstructorRemovedFromOrg{
+        pub instructor_addr: ContractAddress,
+        pub org_owner: ContractAddress
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct BootCampCreated {
+    pub bootcamp_name: ByteArray,
+    pub nft_name: ByteArray,
+    pub num_of_classes: u256,
+    pub bootcamp_ipfs_uri: ByteArray,
+}
 
     #[constructor]
     fn constructor(
@@ -375,7 +391,13 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                                         .entry(caller)
                                         .at(i)
                                         .write(lastInstructor);
-                                }
+                                } 
+                                
+                            // Event ng for removing an inspector
+                            self.emit(InstructorRemovedFromOrg{
+                                instructor_addr: instructor,
+                                org_owner: caller
+                            })
                             }
                 } else {
                     panic!("not an instructor.");
