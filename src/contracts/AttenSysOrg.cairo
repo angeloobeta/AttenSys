@@ -373,6 +373,8 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                     total_sponsorship_fund: 0,
                 };
 
+                let uri = org_ipfs_uri.clone();
+                
                 self.all_org_info.append().write(org_call_data);
                 self
                     .organization_info
@@ -390,7 +392,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                         }
                     );
                let orginization_name = org_name.clone();
-               let uri = org_name.clone();
+               
                 self.emit(OrganizationProfile {
                      org_name: orginization_name,
                      org_ipfs_uri:  uri}
