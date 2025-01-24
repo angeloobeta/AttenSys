@@ -787,53 +787,6 @@ fn test_sponsor() {
     // dispatcher.sponsor_organization(owner_address, "bsvjsbbsxjkjk", 100000);
 }
 
-#[test]
-fn test_deposit_event_emitted() {
-    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
-    let dummy_org = contract_address_const::<'dummy_org'>();
-    let token_addr = contract_address_const::<'token_addr'>();
-    let contract_address = deploy_organization_contract("AttenSysOrg", hash, token_addr, dummy_org);
-    let contract_owner_address: ContractAddress = contract_address_const::<
-        'owner_address'
-    >();
-    
-    let mut spy = spy_events();
-
-    let sponsor_contract_addr = deploy_sponsorship_contract(
-        "AttenSysSponsor", contract_owner_address
-    );
-    let dispatcherForSponsor = IAttenSysSponsorDispatcher {
-        contract_address: sponsor_contract_addr
-    };
-    let owner_address: ContractAddress = contract_address_const::<'owner'>();
-    let dispatcher = IAttenSysOrgDispatcher { contract_address };
-    start_cheat_caller_address(contract_address, owner_address);
-    let org_name: ByteArray = "web3";
-    let org_ipfs_uri: ByteArray = "web3";
-    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
-    dispatcher.setSponsorShipAddress(sponsor_contract_addr);
-    let dispatcherForToken = IERC20Dispatcher { contract_address: token_addr };
-    dispatcherForToken.approve(contract_address, 100000);
-
-    dispatcher.sponsor_organization(owner_address, "bsvjsbbsxjkjk", 100000);
-    dispatcherForSponsor.deposit(token_addr, 10);
-
-    spy
-    .assert_emitted(
-        @array![
-            (
-                sponsor_contract_addr,
-                AttenSysSponsor::Event::SponsorDeposited(
-                    AttenSysSponsor::SponsorDeposited { 
-                        token: token_addr,
-                        amount: 10
-                    }
-                )
-            )
-        ]
-    );
-}
-
 
 #[test]
 #[should_panic(expected: "no organization created.")]

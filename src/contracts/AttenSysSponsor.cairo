@@ -41,11 +41,18 @@ pub mod AttenSysSponsor {
     #[event]
     #[derive(Drop, Debug, PartialEq, starknet::Event)]
     pub enum Event {
-        SponsorDeposited: SponsorDeposited
+        SponsorDeposited: SponsorDeposited,
+        TokenWithdraw: TokenWithdraw
     }
 
     #[derive(Drop, Debug, PartialEq, starknet::Event)]
     pub struct SponsorDeposited {
+        pub token: ContractAddress,
+        pub amount: u256,
+    }
+
+    #[derive(Drop, Debug, PartialEq, starknet::Event)]
+    pub struct TokenWithdraw {
         pub token: ContractAddress,
         pub amount: u256,
     }
@@ -98,6 +105,12 @@ pub mod AttenSysSponsor {
             let has_transferred = token_dispatcher.transfer(recipient: caller, amount: amount);
 
             if has_transferred {
+                self
+                    .emit(
+                        Event::SponsorDeposited(
+                            SponsorDeposited { token: token_address, amount: amount }
+                        )
+                    );
                 self.balances.write(token_address, self.balances.read(token_address) - amount)
             }
         }
