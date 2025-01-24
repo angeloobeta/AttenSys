@@ -23,7 +23,7 @@ pub trait IAttenSysSponsor<TContractState> {
 }
 
 #[starknet::contract]
-pub mod AttenSysSponsor {
+mod AttenSysSponsor {
     use core::num::traits::Zero;
     use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
     use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -36,18 +36,6 @@ pub mod AttenSysSponsor {
         balances: Map<ContractAddress, u256>,
         attenSysOrganization: ContractAddress,
         attenSysEvent: ContractAddress,
-    }
-
-    #[event]
-    #[derive(Drop, Debug, PartialEq, starknet::Event)]
-    pub enum Event {
-        SponsorDeposited: SponsorDeposited
-    }
-
-    #[derive(Drop, Debug, PartialEq, starknet::Event)]
-    pub struct SponsorDeposited {
-        pub token: ContractAddress,
-        pub amount: u256,
     }
 
     #[constructor]
@@ -76,12 +64,6 @@ pub mod AttenSysSponsor {
                 .transferFrom(sender: caller, recipient: get_contract_address(), amount: amount);
 
             if has_transferred {
-                self
-                    .emit(
-                        Event::SponsorDeposited(
-                            SponsorDeposited { token: token_address, amount: amount }
-                        )
-                    );
                 self.balances.write(token_address, self.balances.read(token_address) + amount)
             }
         }
