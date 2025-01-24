@@ -17,7 +17,8 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcher;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
-use attendsys::contracts::AttenSysOrg::AttenSysOrg::{OrganizationProfile};
+use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
+    OrganizationProfile, InstructorAddedToOrg};
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -423,7 +424,10 @@ fn test_create_org_profile() {
     dispatcher.create_org_profile(org_name, org_ipfs_uri);
 
     spy.assert_emitted(
-        @array![(contract_address, Event::OrganizationProfile(OrganizationProfile{org_name: org_name_copy, org_ipfs_uri: org_ipfs_uri_copy}))]);
+        @array![(contract_address, Event::OrganizationProfile(
+            OrganizationProfile{org_name: org_name_copy, org_ipfs_uri: org_ipfs_uri_copy}
+        )
+    )]);
     
 }
 
@@ -432,6 +436,7 @@ fn test_add_instructor_to_org() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let token_addr = contract_address_const::<'new_owner'>();
 
+    let mut spy = spy_events();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
 
     let contract_address = deploy_organization_contract(
@@ -443,16 +448,22 @@ fn test_add_instructor_to_org() {
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
+    let org_name_copy = org_name.clone();
     let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
     dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+
+
 
     let mut arr_of_instructors: Array<ContractAddress> = array![];
 
     arr_of_instructors.append(instructor_address);
 
+    let arr_of_instructors_copy = arr_of_instructors.clone();
     dispatcher.add_instructor_to_org(arr_of_instructors, org_name);
     let org = dispatcher.get_org_info(owner_address);
     assert_eq!(org.number_of_instructors, 2);
+
+    spy.assert_emitted(@array![(contract_address, Event::InstructorAddedToOrg(InstructorAddedToOrg{org_name: org_name_copy, instructor: arr_of_instructors_copy}))])
 }
 
 

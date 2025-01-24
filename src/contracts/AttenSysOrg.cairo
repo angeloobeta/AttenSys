@@ -251,9 +251,9 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
 
     #[derive(Drop,starknet::Event)]
     pub struct InstructorAddedToOrg{
-        org_name: ByteArray,
+        pub org_name: ByteArray,
         #[key]
-        instructor_addr: ContractAddress
+        pub instructor: Array<ContractAddress>
     }
 
     #[derive(Drop, starknet::Event)]
@@ -374,7 +374,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                 };
 
                 let uri = org_ipfs_uri.clone();
-                
+
                 self.all_org_info.append().write(org_call_data);
                 self
                     .organization_info
@@ -418,8 +418,9 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                             add_instructor_to_org(
                                 ref self, caller, *instructor[i], org_name.clone()
                             );
-                            self.emit( InstructorAddedToOrg { org_name: org_name.clone(), instructor_addr: caller.clone()})
-                        }
+                          
+                        };
+                self.emit( InstructorAddedToOrg { org_name: org_name.clone(), instructor:instructor})
             } else {
                 panic!("no organization created.");
             }
