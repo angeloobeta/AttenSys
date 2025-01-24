@@ -18,11 +18,11 @@ use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcher;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
-
-// use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
-// use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
-// use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
-// use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
+use attendsys::contracts::AttenSysSponsor::AttenSysSponsor;
+use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
+use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
+use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
+use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
 
 #[starknet::interface]
 pub trait IERC721<TContractState> {
@@ -785,6 +785,24 @@ fn test_sponsor() {
 // dispatcherForToken.approve(contract_address,100000);
 
     // dispatcher.sponsor_organization(owner_address, "bsvjsbbsxjkjk", 100000);
+}
+
+#[test]
+fn test_deposit_event_emitted() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let dummy_org = contract_address_const::<'dummy_org'>();
+    let token_addr = contract_address_const::<'token_addr'>();
+    let contract_address = deploy_organization_contract("AttenSysOrg", hash, token_addr, dummy_org);
+    let contract_owner_address: ContractAddress = contract_address_const::<
+        'contract_owner_address'
+    >();
+    
+    let mut spy = spy_events();
+
+    let sponsor_contract_addr = deploy_sponsorship_contract(
+        "AttenSysSponsor", contract_owner_address
+    );
+    
 }
 
 
