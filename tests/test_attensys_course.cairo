@@ -1,12 +1,11 @@
 use starknet::{ContractAddress, contract_address_const, ClassHash};
 use snforge_std::{
-    declare,
-    ContractClassTrait,
-    start_cheat_caller_address,
-    stop_cheat_caller_address
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address
 };
 
-use attendsys::contracts::AttenSysCourse::{IAttenSysCourseDispatcher, IAttenSysCourseDispatcherTrait};
+use attendsys::contracts::AttenSysCourse::{
+    IAttenSysCourseDispatcher, IAttenSysCourseDispatcherTrait
+};
 
 fn deploy_contract(name: ByteArray, hash: ClassHash) -> ContractAddress {
     let contract = declare(name).unwrap();
@@ -80,7 +79,10 @@ fn test_claim_admin() {
     start_cheat_caller_address(contract_address, new_admin);
     attensys_course_contract.claim_admin_ownership();
     assert(attensys_course_contract.get_admin() == new_admin, 'admin claim failed');
-    assert(attensys_course_contract.get_new_admin() == contract_address_const::<0>(), 'admin claim failed');
+    assert(
+        attensys_course_contract.get_new_admin() == contract_address_const::<0>(),
+        'admin claim failed'
+    );
     stop_cheat_caller_address(contract_address);
 }
 
@@ -94,7 +96,6 @@ fn test_transfer_admin_should_panic_for_wrong_admin() {
     let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
 
     let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
-
 
     // Wrong admin transfers admin rights to new_admin: should revert
     start_cheat_caller_address(contract_address, invalid_admin);
@@ -124,5 +125,71 @@ fn test_claim_admin_should_panic_for_wrong_new_admin() {
     // Wrong new admin claims admin rights: should panic
     start_cheat_caller_address(contract_address, wrong_new_admin);
     attensys_course_contract.claim_admin_ownership();
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+fn test_check_course_completion_status() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
+
+    let owner: ContractAddress = contract_address_const::<'owner'>();
+    let student: ContractAddress = contract_address_const::<'student'>();
+    let base_uri: ByteArray = "https://example.com/";
+    let name: ByteArray = "Test Course";
+    let symbol: ByteArray = "TC";
+
+    start_cheat_caller_address(contract_address, owner);
+    attensys_course_contract.create_course(owner, true, base_uri, name, symbol);
+
+    // Test initial completion status is false
+    let initial_status = attensys_course_contract
+        .check_course_completion_status_n_certification(1, student);
+    assert(!initial_status, 'should be incomplete');
+
+    // Complete course as student
+    start_cheat_caller_address(contract_address, student);
+    attensys_course_contract.finish_course_claim_certification(1);
+
+    // Test completion status is now true
+    let completion_status = attensys_course_contract
+        .check_course_completion_status_n_certification(1, student);
+    assert(completion_status, 'should be complete');
+
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+fn test_get_total_course_completions() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
+
+    let owner: ContractAddress = contract_address_const::<'owner'>();
+    let student1: ContractAddress = contract_address_const::<'student1'>();
+    let student2: ContractAddress = contract_address_const::<'student2'>();
+    let base_uri: ByteArray = "https://example.com/";
+    let name: ByteArray = "Test Course";
+    let symbol: ByteArray = "TC";
+
+    start_cheat_caller_address(contract_address, owner);
+    attensys_course_contract.create_course(owner, true, base_uri, name, symbol);
+
+    let initial_count = attensys_course_contract.get_total_course_completions(1);
+    assert(initial_count == 0, 'initial count should be 0');
+
+    // First student completes
+    start_cheat_caller_address(contract_address, student1);
+    attensys_course_contract.finish_course_claim_certification(1);
+    let count_after_first = attensys_course_contract.get_total_course_completions(1);
+    assert(count_after_first == 1, 'count should be 1');
+
+    // Second student completes
+    start_cheat_caller_address(contract_address, student2);
+    attensys_course_contract.finish_course_claim_certification(1);
+    let count_after_second = attensys_course_contract.get_total_course_completions(1);
+    assert(count_after_second == 2, 'count should be 2');
+
     stop_cheat_caller_address(contract_address);
 }

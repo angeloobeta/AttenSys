@@ -2,12 +2,13 @@ use starknet::{ContractAddress, contract_address_const, ClassHash};
 // get_caller_address,
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global,
-    spy_events, EventSpyAssertionsTrait,
+    spy_events, EventSpyAssertionsTrait
 };
 
 
 // use attendsys::AttenSys::IAttenSysSafeDispatcher;
 // use attendsys::AttenSys::IAttenSysSafeDispatcherTrait;
+use attendsys::contracts::AttenSysCourse::AttenSysCourse;
 use attendsys::contracts::AttenSysCourse::IAttenSysCourseDispatcher;
 use attendsys::contracts::AttenSysCourse::IAttenSysCourseDispatcherTrait;
 
@@ -16,6 +17,7 @@ use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
 
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcher;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
+
 
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
@@ -26,6 +28,11 @@ use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
 // use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
+use attendsys::contracts::AttenSysSponsor::AttenSysSponsor;
+use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
+use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
+use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
+use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
 
 #[starknet::interface]
 pub trait IERC721<TContractState> {
@@ -147,6 +154,7 @@ fn test_create_course() {
     let owner_address_two: ContractAddress = contract_address_const::<'owner_two'>();
 
     let dispatcher = IAttenSysCourseDispatcher { contract_address };
+    let mut spy = spy_events();
 
     let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
     let nft_name_b = "cairo";
@@ -156,7 +164,28 @@ fn test_create_course() {
     let nft_name_a = "cairo";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a);
+    dispatcher
+        .create_course(
+            owner_address, true, token_uri_a.clone(), nft_name_a.clone(), nft_symb_a.clone()
+        );
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    AttenSysCourse::Event::CourseCreated(
+                        AttenSysCourse::CourseCreated {
+                            course_identifier: 1,
+                            owner_: owner_address,
+                            accessment_: true,
+                            base_uri: token_uri_a,
+                            name_: nft_name_a,
+                            symbol: nft_symb_a
+                        }
+                    )
+                )
+            ]
+        );
     dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b);
 
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
@@ -191,6 +220,7 @@ fn test_finish_course_n_claim() {
     let viewer3_address: ContractAddress = contract_address_const::<'viewer3_address'>();
 
     let dispatcher = IAttenSysCourseDispatcher { contract_address };
+    let mut spy = spy_events();
 
     let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
     let nft_name_b = "cairo_b";
@@ -212,6 +242,19 @@ fn test_finish_course_n_claim() {
 
     start_cheat_caller_address(contract_address, viewer1_address);
     dispatcher.finish_course_claim_certification(1);
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    AttenSysCourse::Event::CourseCertClaimed(
+                        AttenSysCourse::CourseCertClaimed {
+                            course_identifier: 1, candidate: viewer1_address
+                        }
+                    )
+                )
+            ]
+        );
     start_cheat_caller_address(contract_address, viewer2_address);
     dispatcher.finish_course_claim_certification(2);
     start_cheat_caller_address(contract_address, viewer3_address);
@@ -244,6 +287,7 @@ fn test_add_replace_course_content() {
 
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let dispatcher = IAttenSysCourseDispatcher { contract_address };
+    let mut spy = spy_events();
 
     let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
     let nft_name_a = "cairo_a";
@@ -252,6 +296,22 @@ fn test_add_replace_course_content() {
     dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a, token_uri_a);
 
     dispatcher.add_replace_course_content(1, owner_address, '123', '567');
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    AttenSysCourse::Event::CourseReplaced(
+                        AttenSysCourse::CourseReplaced {
+                            course_identifier: 1,
+                            owner_: owner_address,
+                            new_course_uri_a: '123',
+                            new_course_uri_b: '567'
+                        }
+                    )
+                )
+            ]
+        );
     let array_calldata = array![1];
     let course_info = dispatcher.get_course_infos(array_calldata);
     assert(*course_info.at(0).uri.first == '123', 'wrong first uri');
@@ -714,6 +774,7 @@ fn test_register_for_bootcamp() {
 
     dispatcher.register_for_bootcamp(org_address, instructor_address, 0);
 
+
     // org_address: org_,
     // instructor_address: instructor_,
     // bootcamp_id: bootcamp_id
@@ -732,6 +793,7 @@ fn test_register_for_bootcamp() {
                 )
             ]
         )
+
 }
 
 #[test]
@@ -806,6 +868,7 @@ fn test_approve_registration() {
         .create_bootcamp(
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
+        
     let student_address_cp = student_address.clone();
     start_cheat_caller_address(contract_address, student_address);
     dispatcher.register_for_bootcamp(org_address, instructor_address, 0);
