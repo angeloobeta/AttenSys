@@ -23,7 +23,7 @@ pub trait IAttenSysSponsor<TContractState> {
 }
 
 #[starknet::contract]
-mod AttenSysSponsor {
+pub mod AttenSysSponsor {
     use core::num::traits::Zero;
     use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
     use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -36,6 +36,25 @@ mod AttenSysSponsor {
         balances: Map<ContractAddress, u256>,
         attenSysOrganization: ContractAddress,
         attenSysEvent: ContractAddress,
+    }
+
+    #[event]
+    #[derive(Drop, Debug, PartialEq, starknet::Event)]
+    pub enum Event {
+        SponsorDeposited: SponsorDeposited,
+        TokenWithdraw: TokenWithdraw
+    }
+
+    #[derive(Drop, Debug, PartialEq, starknet::Event)]
+    pub struct SponsorDeposited {
+        pub token: ContractAddress,
+        pub amount: u256,
+    }
+
+    #[derive(Drop, Debug, PartialEq, starknet::Event)]
+    pub struct TokenWithdraw {
+        pub token: ContractAddress,
+        pub amount: u256,
     }
 
     #[constructor]
@@ -64,6 +83,12 @@ mod AttenSysSponsor {
                 .transferFrom(sender: caller, recipient: get_contract_address(), amount: amount);
 
             if has_transferred {
+                self
+                    .emit(
+                        Event::SponsorDeposited(
+                            SponsorDeposited { token: token_address, amount: amount }
+                        )
+                    );
                 self.balances.write(token_address, self.balances.read(token_address) + amount)
             }
         }
@@ -80,6 +105,12 @@ mod AttenSysSponsor {
             let has_transferred = token_dispatcher.transfer(recipient: caller, amount: amount);
 
             if has_transferred {
+                self
+                    .emit(
+                        Event::SponsorDeposited(
+                            SponsorDeposited { token: token_address, amount: amount }
+                        )
+                    );
                 self.balances.write(token_address, self.balances.read(token_address) - amount)
             }
         }
