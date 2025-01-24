@@ -800,7 +800,7 @@ fn test_deposit_event_emitted() {
     let mut spy = spy_events();
 
     let sponsor_contract_addr = deploy_sponsorship_contract(
-        "AttenSysSponsor", contract_owner_address
+        'AttenSysSponsor', contract_owner_address
     );
     let dispatcherForSponsor = IAttenSysSponsorDispatcher {
         contract_address: sponsor_contract_addr
