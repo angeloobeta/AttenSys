@@ -215,7 +215,14 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
         InstructorRemovedFromOrg: InstructorRemovedFromOrg,
         BootCampCreated: BootCampCreated,
         ActiveMeetLinkAdded: ActiveMeetLinkAdded,
-        VideoLinkUploaded: VideoLinkUploaded
+        VideoLinkUploaded: VideoLinkUploaded,
+        BootcampRegistration: BootcampRegistration,
+        RegistrationApproved: RegistrationApproved,
+        AttendanceMarked: AttendanceMarked,
+        StudentsCertified:  StudentsCertified,
+        SponsorshipAddressSet: SponsorshipAddressSet,
+        OrganizationSponsored:OrganizationSponsored,
+        SponsorshipFundWithdrawn:SponsorshipFundWithdrawn
     }
 
     #[derive(Drop, starknet::Event)]
@@ -280,7 +287,52 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
     pub is_instructor: bool,
     pub org_address: ContractAddress,
     pub bootcamp_id: u64,
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct BootcampRegistration {
+    pub org_address: ContractAddress,
+    pub instructor_address: ContractAddress,
+    pub bootcamp_id: u64,
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct RegistrationApproved {
+    pub student_address: ContractAddress,
+    pub bootcamp_id: u64,   
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct AttendanceMarked {
+    pub org_address: ContractAddress,
+    pub instructor_address: ContractAddress,
+    pub class_id: u64,
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct StudentsCertified {
+    pub org_address: ContractAddress,
+    pub class_id: u64,
+    pub student_addresses: Array<ContractAddress>,
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct SponsorshipAddressSet {
+    pub sponsor_contract_address: ContractAddress,
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct OrganizationSponsored {
+    pub organization_address: ContractAddress,
+    pub sponsor_uri: ByteArray,
+    pub sponsorship_amount: u256,   
+    }
+
+    #[derive(Drop,starknet::Event)]
+    pub struct SponsorshipFundWithdrawn {
+    pub withdrawal_amount: u256,
 }
+
 
     #[constructor]
     fn constructor(
@@ -656,8 +708,15 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                                         }
                                     );
                             }
-                        }
-            } else {
+                        };
+            
+                        self.emit( BootcampRegistration{
+                            org_address: org_,
+                            instructor_address: instructor_,
+                            bootcamp_id: bootcamp_id
+                        });
+} 
+            else {
                 panic!("unassociated org N instructor");
             }
         }
@@ -702,6 +761,13 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                             org.number_of_students = org.number_of_students + 1;
                             self.organization_info.entry(caller).write(org);
                         };
+
+                        self.emit(RegistrationApproved{
+                            student_address: student_address,
+                            bootcamp_id: bootcamp_id
+                        }
+
+                        );
             } else {
                 panic!("no organization created.");
             }
@@ -729,6 +795,11 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
             assert(instructor_class.active_status, 'not a class');
             assert(!reg_status, 'not registered student');
             self.student_attendance_status.entry((caller, class_id)).write(true);
+            self.emit(AttendanceMarked{
+                org_address: org_,
+                instructor_address: instructor_,
+                class_id:class_id
+            });
         }
 
         fn batch_certify_students(
@@ -756,6 +827,11 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                         }
                     }
             }
+            self.emit(StudentsCertified {
+                org_address: org_,
+                class_id: class_id,
+                student_addresses: students
+            })
         }
 
         fn setSponsorShipAddress(
@@ -764,6 +840,9 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
             only_admin(ref self);
             assert(!sponsor_contract_address.is_zero(), 'Null address not allowed');
             self.sponsorship_contract_address.write(sponsor_contract_address);
+            self.emit(SponsorshipAddressSet {
+                sponsor_contract_address
+            });
         }
 
         fn sponsor_organization(
