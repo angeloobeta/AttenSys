@@ -213,7 +213,9 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
         OrganizationProfile: OrganizationProfile,
         InstructorAddedToOrg: InstructorAddedToOrg,
         InstructorRemovedFromOrg: InstructorRemovedFromOrg,
-        BootCampCreated: BootCampCreated
+        BootCampCreated: BootCampCreated,
+        ActiveMeetLinkAdded: ActiveMeetLinkAdded,
+        VideoLinkUploaded: VideoLinkUploaded
     }
 
     #[derive(Drop, starknet::Event)]
@@ -255,10 +257,29 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
 
     #[derive(Drop,starknet::Event)]
     pub struct BootCampCreated {
+    pub  org_name: ByteArray,
     pub bootcamp_name: ByteArray,
     pub nft_name: ByteArray,
+    pub nft_symbol: ByteArray,
+    pub nft_uri: ByteArray,
     pub num_of_classes: u256,
     pub bootcamp_ipfs_uri: ByteArray,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ActiveMeetLinkAdded {
+    pub meet_link: ByteArray,
+    pub bootcamp_id: u64,
+    pub is_instructor: bool,
+    pub org_address: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct VideoLinkUploaded {
+    pub video_link: ByteArray,
+    pub is_instructor: bool,
+    pub org_address: ContractAddress,
+    pub bootcamp_id: u64,
 }
 
     #[constructor]
@@ -418,6 +439,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
             bootcamp_id: u64
         ) {
             assert(video_link != "", 'empty link');
+            let video_link_cp = video_link.clone();
             let mut status: bool = false;
             let caller = get_caller_address();
 
@@ -443,6 +465,14 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                         .append()
                         .write(video_link);
                 }
+
+                self.emit(VideoLinkUploaded{
+                    video_link: video_link_cp,
+                    is_instructor: true,
+                    org_address: org_address,
+                    bootcamp_id: bootcamp_id
+
+                });
             } else {
                 panic!("not part of organization.");
             };
@@ -514,6 +544,18 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                 org_call_data.number_of_all_bootcamps += 1;
                 self.organization_info.entry(caller).write(org_call_data);
 
+                // Emmiting a Bootcamp Event
+                self.emit(
+                    BootCampCreated{
+                        org_name: org_name,
+                        bootcamp_name: bootcamp_name,
+                        nft_name: nft_name,
+                        nft_symbol: nft_symbol,
+                        nft_uri: nft_uri,
+                        num_of_classes: num_of_class_to_create,
+                        bootcamp_ipfs_uri: bootcamp_ipfs_uri
+                    }
+                );
                 //create classes
                 create_a_class(ref self, caller, num_of_class_to_create, index);
             } else {
@@ -530,7 +572,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
         ) {
             let mut status: bool = false;
             let caller = get_caller_address();
-
+            let active_link = meet_link.clone();
             if is_instructor {
                 status = self.instructor_part_of_org.entry((org_address, caller)).read();
             } else {
@@ -554,9 +596,24 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                         .entry(caller)
                         .at(bootcamp_id)
                         .read();
+                   
                     bootcamp.active_meet_link = meet_link;
                     self.org_to_bootcamps.entry(caller).at(bootcamp_id).write(bootcamp);
                 }
+                // pub meet_link: ByteArray,
+                // pub bootcamp_id: u64,
+                // pub is_instructor: bool,
+                // pub org_address: ContractAddress,
+
+                // Emitting events when a active link is added
+
+                self.emit(ActiveMeetLinkAdded{
+                        meet_link: active_link,
+                        bootcamp_id: bootcamp_id.clone(),
+                        is_instructor: true,
+                        org_address: org_address
+                    }
+                );
             } else {
                 panic!("not part of organization.");
             };
