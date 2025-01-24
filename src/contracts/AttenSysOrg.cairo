@@ -497,7 +497,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
             let video_link_cp = video_link.clone();
             let mut status: bool = false;
             let caller = get_caller_address();
-
+            let is_instructor_cp = is_instructor.clone();
             if is_instructor {
                 status = self.instructor_part_of_org.entry((org_address, caller)).read();
             } else {
@@ -523,7 +523,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
 
                 self.emit(VideoLinkUploaded{
                     video_link: video_link_cp,
-                    is_instructor: true,
+                    is_instructor: is_instructor_cp,
                     org_address: org_address,
                     bootcamp_id: bootcamp_id
 
@@ -628,6 +628,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
             let mut status: bool = false;
             let caller = get_caller_address();
             let active_link = meet_link.clone();
+            let is_instructor_cp = is_instructor.clone();
             if is_instructor {
                 status = self.instructor_part_of_org.entry((org_address, caller)).read();
             } else {
@@ -665,7 +666,7 @@ use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::d
                 self.emit(ActiveMeetLinkAdded{
                         meet_link: active_link,
                         bootcamp_id: bootcamp_id.clone(),
-                        is_instructor: true,
+                        is_instructor: is_instructor_cp,
                         org_address: org_address
                     }
                 );

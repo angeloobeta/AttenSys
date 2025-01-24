@@ -18,7 +18,8 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
-    OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated};
+    OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated, ActiveMeetLinkAdded,
+    BootcampRegistration, RegistrationApproved};
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -572,14 +573,6 @@ fn test_create_bootcamp_for_org() {
     assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
     assert_eq!(updatedOrg.number_of_all_classes, 3);
 
-                        // org_name: org_name,
-                        // bootcamp_name: bootcamp_name,
-                        // nft_name: nft_name,
-                        // nft_symbol: nft_symbol,
-                        // nft_uri: nft_uri,
-                        // num_of_classes: num_of_class_to_create,
-                        // bootcamp_ipfs_uri: bootcamp_ipfs_uri
-
     spy.assert_emitted(@array![(contract_address, Event:: BootCampCreated(
          BootCampCreated{
             org_name: org_name_cp,
@@ -601,6 +594,7 @@ fn test_add_active_meet_link_to_bootcamp() {
     let contract_address = deploy_organization_contract(
         "AttenSysOrg", hash, token_addr, sponsor_contract_addr
     );
+    let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
 
@@ -630,6 +624,14 @@ fn test_add_active_meet_link_to_bootcamp() {
     dispatcher.add_active_meet_link("https:meet.google.com/hgf-snbh-snh", 0, false, owner_address);
     dispatcher.add_active_meet_link("https:meet.google.com/shd-snag-qro", 0, false, owner_address);
     dispatcher.add_active_meet_link("https:meet.google.com/mna-xbbh-snh", 0, true, owner_address);
+
+    spy.assert_emitted(@array![(contract_address,Event::ActiveMeetLinkAdded(ActiveMeetLinkAdded{
+            meet_link: "https:meet.google.com/hgf-snbh-snh",
+            bootcamp_id: 0,
+            is_instructor: false,
+            org_address:  owner_address     
+        }))]
+    );
 }
 
 #[test]
@@ -640,9 +642,10 @@ fn test_register_for_bootcamp() {
     let contract_address = deploy_organization_contract(
         "AttenSysOrg", hash, token_addr, sponsor_contract_addr
     );
+    let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
-
+    let instructor_address_cp = instructor_address.clone();
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
@@ -655,7 +658,7 @@ fn test_register_for_bootcamp() {
     dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
     let org = dispatcher.get_org_info(owner_address);
     let org_address: ContractAddress = org.address_of_org;
-
+    let org_address_cp = org_address.clone();
     let token_uri: ByteArray = "https://dummy_uri.com";
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
@@ -668,6 +671,16 @@ fn test_register_for_bootcamp() {
     dispatcher.register_for_bootcamp(
         org_address, instructor_address, 0
     );
+
+
+    // org_address: org_,
+    // instructor_address: instructor_,
+    // bootcamp_id: bootcamp_id
+    spy.assert_emitted(@array![(contract_address, Event::BootcampRegistration(BootcampRegistration{
+        org_address: org_address_cp,
+        instructor_address: instructor_address_cp,
+        bootcamp_id: 0
+    }))])
 
 }
 
@@ -719,6 +732,7 @@ fn test_approve_registration() {
     let contract_address = deploy_organization_contract(
         "AttenSysOrg", hash, token_addr, sponsor_contract_addr
     );
+    let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
     let student_address: ContractAddress = contract_address_const::<'candidate'>();
@@ -744,7 +758,7 @@ fn test_approve_registration() {
         .create_bootcamp(
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
-        
+        let student_address_cp = student_address.clone();
         start_cheat_caller_address(contract_address, student_address);
         dispatcher.register_for_bootcamp(
             org_address, instructor_address, 0
@@ -756,6 +770,13 @@ fn test_approve_registration() {
     let updated_org = dispatcher.get_org_info(owner_address);
     let updated_org_num_of_students = updated_org.number_of_students;
     assert(updated_org_num_of_students == 1, 'inaccurate num of students');
+
+    spy.assert_emitted(@array![(contract_address, Event::RegistrationApproved(
+        RegistrationApproved{
+            student_address: student_address_cp,
+            bootcamp_id: 0
+        }
+    ))]);
 }
 
 #[test]
