@@ -18,7 +18,7 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
-    OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg};
+    OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated};
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -539,12 +539,17 @@ fn test_create_bootcamp_for_org() {
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
 
+    let mut spy = spy_events();
+
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
+    let org_name_cp =org_name.clone();
     let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let bootcamp_name_cp = bootcamp_name.clone();
     let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
     let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri_cp = bootcamp_ipfs_uri.clone();
     dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
     let mut arr_of_instructors: Array<ContractAddress> = array![];
     arr_of_instructors.append(instructor_address);
@@ -553,8 +558,11 @@ fn test_create_bootcamp_for_org() {
     assert_eq!(org.number_of_instructors, 2);
 
     let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_cp = token_uri.clone();
     let nft_name: ByteArray = "cairo";
+    let nft_name_cp = nft_name.clone();
     let nft_symb: ByteArray = "CAO";
+    let nft_symb_cp= nft_symb.clone();
 
     dispatcher
         .create_bootcamp(
@@ -563,6 +571,26 @@ fn test_create_bootcamp_for_org() {
     let updatedOrg = dispatcher.get_org_info(owner_address);
     assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
     assert_eq!(updatedOrg.number_of_all_classes, 3);
+
+                        // org_name: org_name,
+                        // bootcamp_name: bootcamp_name,
+                        // nft_name: nft_name,
+                        // nft_symbol: nft_symbol,
+                        // nft_uri: nft_uri,
+                        // num_of_classes: num_of_class_to_create,
+                        // bootcamp_ipfs_uri: bootcamp_ipfs_uri
+
+    spy.assert_emitted(@array![(contract_address, Event:: BootCampCreated(
+         BootCampCreated{
+            org_name: org_name_cp,
+            bootcamp_name: bootcamp_name_cp,
+            nft_name: token_uri_cp,
+            nft_symbol: nft_name_cp,
+            nft_uri: nft_symb_cp,
+            num_of_classes: 3,
+            bootcamp_ipfs_uri: bootcamp_ipfs_uri_cp
+         }))]);
+
 }
 
 #[test]
