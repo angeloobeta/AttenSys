@@ -96,7 +96,7 @@ pub trait IAttenSysOrg<TContractState> {
 
 //The contract
 #[starknet::contract]
-mod AttenSysOrg {
+pub mod AttenSysOrg {
     use starknet::event::EventEmitter;
 use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall};
     use core::starknet::storage::{

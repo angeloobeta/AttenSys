@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, contract_address_const, ClassHash};
 // get_caller_address,
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global
+    declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global,spy_events, EventSpyAssertionsTrait,
 };
 
 
@@ -16,7 +16,8 @@ use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcher;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
-
+use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
+use attendsys::contracts::AttenSysOrg::AttenSysOrg::{OrganizationProfile};
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -403,18 +404,27 @@ fn test_create_org_profile() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let token_addr = contract_address_const::<'new_owner'>();
 
+    let mut spy = spy_events();
+
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
 
     let contract_address = deploy_organization_contract(
         "AttenSysOrg", hash, token_addr, sponsor_contract_addr
     );
-    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();  
 
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
     let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+
+    let org_name_copy = org_name.clone();
+    let org_ipfs_uri_copy = org_ipfs_uri.clone();
     dispatcher.create_org_profile(org_name, org_ipfs_uri);
+
+    spy.assert_emitted(
+        @array![(contract_address, Event::OrganizationProfile(OrganizationProfile{org_name: org_name_copy, org_ipfs_uri: org_ipfs_uri_copy}))]);
+    
 }
 
 #[test]
