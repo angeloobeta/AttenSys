@@ -18,7 +18,7 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
-    OrganizationProfile, InstructorAddedToOrg};
+    OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg};
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
@@ -499,6 +499,7 @@ fn test_remove_instructor_from_org() {
     let contract_address = deploy_organization_contract(
         "AttenSysOrg", hash, token_addr, sponsor_contract_addr
     );
+    let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
     let instructor_address2: ContractAddress = contract_address_const::<'instructor2'>();
@@ -519,6 +520,12 @@ fn test_remove_instructor_from_org() {
     dispatcher.remove_instructor_from_org(instructor_address3);
     let newOrg = dispatcher.get_org_info(owner_address);
     assert_eq!(newOrg.number_of_instructors, 3);
+
+    spy.assert_emitted(@array![(contract_address, Event::InstructorRemovedFromOrg(
+        InstructorRemovedFromOrg{
+            instructor_addr: instructor_address3, org_owner: owner_address
+        }))])
+
 }
 
 #[test]
