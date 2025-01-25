@@ -18,7 +18,6 @@ use attendsys::contracts::AttenSysEvent::IAttenSysEventDispatcherTrait;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcher;
 use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 
-
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
     OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated,
