@@ -933,7 +933,6 @@ fn test_sponsor() {
     // dispatcher.sponsor_organization(owner_address, "bsvjsbbsxjkjk", 100000);
 }
 
-
 #[test]
 #[should_panic(expected: "no organization created.")]
 fn test_when_no_org_address_add_instructor_to_org() {

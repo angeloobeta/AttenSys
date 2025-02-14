@@ -34,7 +34,6 @@ pub trait IAttenSysOrg<TContractState> {
     fn register_for_bootcamp(
         ref self: TContractState,
         org_: ContractAddress,
-        instructor_: ContractAddress,
         bootcamp_id: u64
     );
     fn approve_registration(
@@ -291,7 +290,6 @@ pub mod AttenSysOrg {
     #[derive(Drop, starknet::Event)]
     pub struct BootcampRegistration {
         pub org_address: ContractAddress,
-        pub instructor_address: ContractAddress,
         pub bootcamp_id: u64,
     }
 
@@ -683,12 +681,11 @@ pub mod AttenSysOrg {
         fn register_for_bootcamp(
             ref self: ContractState,
             org_: ContractAddress,
-            instructor_: ContractAddress,
             bootcamp_id: u64
         ) {
             let caller = get_caller_address();
-            let status: bool = self.instructor_part_of_org.entry((org_, instructor_)).read();
-            // check that instructor is associated with an organization
+            let status: bool = self.created_status.entry(caller).read();
+            // check org is created
             if status {
                 let mut bootcamp = self.org_to_bootcamps.entry(org_);
                 for i in 0
@@ -723,7 +720,6 @@ pub mod AttenSysOrg {
                     .emit(
                         BootcampRegistration {
                             org_address: org_,
-                            instructor_address: instructor_,
                             bootcamp_id: bootcamp_id
                         }
                     );
