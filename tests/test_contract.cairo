@@ -777,7 +777,7 @@ fn test_register_for_bootcamp() {
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
 
-    dispatcher.register_for_bootcamp(org_address, instructor_address, 0);
+    dispatcher.register_for_bootcamp(org_address, 0);
 
     // org_address: org_,
     // instructor_address: instructor_,
@@ -790,51 +790,12 @@ fn test_register_for_bootcamp() {
                     Event::BootcampRegistration(
                         BootcampRegistration {
                             org_address: org_address_cp,
-                            instructor_address: instructor_address_cp,
                             bootcamp_id: 0
                         }
                     )
                 )
             ]
         )
-}
-
-#[test]
-#[should_panic(expected: "unassociated org N instructor")]
-fn test_register_for_bootcamp_when_instructor_unregistered() {
-    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
-    let token_addr = contract_address_const::<'new_owner'>();
-    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
-    let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
-    );
-    let owner_address: ContractAddress = contract_address_const::<'owner'>();
-    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
-    let unreg_instructor_address: ContractAddress = contract_address_const::<'fake instructor'>();
-
-    let dispatcher = IAttenSysOrgDispatcher { contract_address };
-    start_cheat_caller_address(contract_address, owner_address);
-    let org_name: ByteArray = "web3";
-    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
-    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
-    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
-    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
-    let mut arr_of_instructors: Array<ContractAddress> = array![];
-    arr_of_instructors.append(instructor_address);
-    dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
-    let org = dispatcher.get_org_info(owner_address);
-    let org_address: ContractAddress = org.address_of_org;
-
-    let token_uri: ByteArray = "https://dummy_uri.com";
-    let nft_name: ByteArray = "cairo";
-    let nft_symb: ByteArray = "CAO";
-
-    dispatcher
-        .create_bootcamp(
-            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
-        );
-
-    dispatcher.register_for_bootcamp(org_address, unreg_instructor_address, 0);
 }
 
 #[test]
@@ -867,14 +828,14 @@ fn test_approve_registration() {
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
 
+    start_cheat_caller_address(contract_address, org_address);
     dispatcher
         .create_bootcamp(
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
 
     let student_address_cp = student_address.clone();
-    start_cheat_caller_address(contract_address, student_address);
-    dispatcher.register_for_bootcamp(org_address, instructor_address, 0);
+    dispatcher.register_for_bootcamp(owner_address, 0);
 
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher.approve_registration(student_address, 0);

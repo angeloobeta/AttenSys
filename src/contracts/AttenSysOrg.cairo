@@ -724,7 +724,7 @@ pub mod AttenSysOrg {
                         }
                     );
             } else {
-                panic!("unassociated org N instructor");
+                panic!("not part of organization.");
             }
         }
 
@@ -1196,7 +1196,7 @@ pub mod AttenSysOrg {
     }
 
     fn only_admin(ref self: ContractState) {
-        let caller = get_caller_address();
+        let _caller = get_caller_address();
         // assert(caller == self.admin.read(), 'Not admin');
     }
 }
