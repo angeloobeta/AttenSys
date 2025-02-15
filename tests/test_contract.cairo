@@ -156,16 +156,18 @@ fn test_create_course() {
     let mut spy = spy_events();
 
     let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
+    let token_uri_b_2: ByteArray = "https://dummy_uri.com/your_idb";
     let nft_name_b = "cairo";
     let nft_symb_b = "CAO";
 
     let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
+    let token_uri_a_1: ByteArray = "https://dummy_uri.com/your_id";
     let nft_name_a = "cairo";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher
         .create_course(
-            owner_address, true, token_uri_a.clone(), nft_name_a.clone(), nft_symb_a.clone()
+            owner_address, true, token_uri_a.clone(), nft_name_a.clone(), nft_symb_a.clone(), token_uri_a_1
         );
     spy
         .assert_emitted(
@@ -177,22 +179,24 @@ fn test_create_course() {
                             course_identifier: 1,
                             owner_: owner_address,
                             accessment_: true,
-                            base_uri: token_uri_a,
+                            base_uri: token_uri_a.clone(),
                             name_: nft_name_a,
-                            symbol: nft_symb_a
+                            symbol: nft_symb_a,
+                            course_ipfs_uri : token_uri_a.clone()
                         }
                     )
                 )
             ]
         );
-    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b);
+    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
 
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
+    let token_uri_11: ByteArray = "https://dummy_uri.com/your_idS";
     let nft_name = "cairo";
     let nft_symb = "CAO";
     //call again
     start_cheat_caller_address(contract_address, owner_address_two);
-    dispatcher.create_course(owner_address_two, true, token_uri, nft_name, nft_symb);
+    dispatcher.create_course(owner_address_two, true, token_uri, nft_name, nft_symb, token_uri_11);
     let creator_courses = dispatcher.get_all_creator_courses(owner_address);
     let creator_courses_two = dispatcher.get_all_creator_courses(owner_address_two);
     let creator_info = dispatcher.get_creator_info(owner_address);
@@ -222,22 +226,25 @@ fn test_finish_course_n_claim() {
     let mut spy = spy_events();
 
     let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
+    let token_uri_b_2: ByteArray = "https://dummy_uri.com/your_idb";
     let nft_name_b = "cairo_b";
     let nft_symb_b = "CAO";
 
     let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
+    let token_uri_a_1: ByteArray = "https://dummy_uri.com/your_id";
     let nft_name_a = "cairo_a";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a);
-    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b);
+    dispatcher.create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a, token_uri_a_1);
+    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
 
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
+    let token_uri_2: ByteArray = "https://dummy_uri.com/your_idS";
     let nft_name = "cairo_c";
     let nft_symb = "CAO";
     //call again
     start_cheat_caller_address(contract_address, owner_address_two);
-    dispatcher.create_course(owner_address_two, true, token_uri, nft_name, nft_symb);
+    dispatcher.create_course(owner_address_two, true, token_uri, nft_name, nft_symb, token_uri_2);
 
     start_cheat_caller_address(contract_address, viewer1_address);
     dispatcher.finish_course_claim_certification(1);
@@ -289,10 +296,11 @@ fn test_add_replace_course_content() {
     let mut spy = spy_events();
 
     let token_uri_a: ByteArray = "https://dummy_uri.com/your_id";
+    let token_uri_a_1: ByteArray = "https://dummy_uri.com/your_id";
     let nft_name_a = "cairo_a";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true, nft_name_a, nft_symb_a, token_uri_a);
+    dispatcher.create_course(owner_address, true,token_uri_a, nft_name_a, nft_symb_a, token_uri_a_1);
 
     dispatcher.add_replace_course_content(1, owner_address, '123', '567');
     spy
