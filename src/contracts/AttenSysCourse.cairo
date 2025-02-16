@@ -194,13 +194,19 @@ pub mod AttenSysCourse {
                 course_ipfs_uri: course_ipfs_uri.clone()
             };
 
-            self.creator_to_all_content.entry(owner_).append().write(Course {
-                owner: owner_,
-                course_identifier: current_identifier,
-                accessment: accessment_,
-                uri: empty_uri,
-                course_ipfs_uri: course_ipfs_uri.clone()
-            });
+            self
+                .creator_to_all_content
+                .entry(owner_)
+                .append()
+                .write(
+                    Course {
+                        owner: owner_,
+                        course_identifier: current_identifier,
+                        accessment: accessment_,
+                        uri: empty_uri,
+                        course_ipfs_uri: course_ipfs_uri.clone()
+                    }
+                );
             self.course_creator_info.entry(owner_).write(current_creator_info);
             self
                 .specific_course_info_with_identifer

@@ -31,11 +31,7 @@ pub trait IAttenSysOrg<TContractState> {
         org_address: ContractAddress,
         bootcamp_id: u64
     );
-    fn register_for_bootcamp(
-        ref self: TContractState,
-        org_: ContractAddress,
-        bootcamp_id: u64
-    );
+    fn register_for_bootcamp(ref self: TContractState, org_: ContractAddress, bootcamp_id: u64);
     fn approve_registration(
         ref self: TContractState, student_address: ContractAddress, bootcamp_id: u64
     );
@@ -678,11 +674,7 @@ pub mod AttenSysOrg {
             };
         }
 
-        fn register_for_bootcamp(
-            ref self: ContractState,
-            org_: ContractAddress,
-            bootcamp_id: u64
-        ) {
+        fn register_for_bootcamp(ref self: ContractState, org_: ContractAddress, bootcamp_id: u64) {
             let caller = get_caller_address();
             let status: bool = self.created_status.entry(caller).read();
             // check org is created
@@ -716,13 +708,7 @@ pub mod AttenSysOrg {
                             }
                         };
 
-                self
-                    .emit(
-                        BootcampRegistration {
-                            org_address: org_,
-                            bootcamp_id: bootcamp_id
-                        }
-                    );
+                self.emit(BootcampRegistration { org_address: org_, bootcamp_id: bootcamp_id });
             } else {
                 panic!("not part of organization.");
             }
