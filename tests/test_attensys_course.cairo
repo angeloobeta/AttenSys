@@ -176,7 +176,7 @@ fn test_get_total_course_completions() {
     let symbol: ByteArray = "TC";
 
     start_cheat_caller_address(contract_address, owner);
-    attensys_course_contract.create_course(owner, true, base_uri, name, symbol, base_uri_2);
+    attensys_course_contract.create_course(owner, true, base_uri, name, symbol,base_uri_2);
 
     let initial_count = attensys_course_contract.get_total_course_completions(1);
     assert(initial_count == 0, 'initial count should be 0');
