@@ -31,8 +31,13 @@ pub trait IAttenSysOrg<TContractState> {
         org_address: ContractAddress,
         bootcamp_id: u64
     );
-    fn register_for_bootcamp(ref self: TContractState, org_: ContractAddress, bootcamp_id: u64);
+    fn register_for_bootcamp(
+        ref self: TContractState, org_: ContractAddress, bootcamp_id: u64, student_uri: ByteArray,
+    );
     fn approve_registration(
+        ref self: TContractState, student_address: ContractAddress, bootcamp_id: u64
+    );
+    fn decline_registration(
         ref self: TContractState, student_address: ContractAddress, bootcamp_id: u64
     );
     fn mark_attendance_for_a_class(
@@ -73,6 +78,7 @@ pub trait IAttenSysOrg<TContractState> {
     ) -> Array<AttenSysOrg::Class>;
     fn get_org_info(self: @TContractState, org_: ContractAddress) -> AttenSysOrg::Organization;
     fn get_all_org_info(self: @TContractState) -> Array<AttenSysOrg::Organization>;
+    //@todo narrow down the student info to specific organization
     fn get_student_info(self: @TContractState, student_: ContractAddress) -> AttenSysOrg::Student;
     fn get_student_classes(
         self: @TContractState, student: ContractAddress
@@ -196,16 +202,10 @@ pub mod AttenSysOrg {
     pub struct Student {
         pub address_of_student: ContractAddress,
         pub num_of_bootcamps_registered_for: u256,
-        pub registered: bool,
+        pub status: u8,
+        pub student_details_uri: ByteArray,
     }
 
-    #[derive(Drop)]
-    enum Coin {
-        Penny,
-        Nickel,
-        Dime,
-        Quarter,
-    }
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -220,6 +220,7 @@ pub mod AttenSysOrg {
         VideoLinkUploaded: VideoLinkUploaded,
         BootcampRegistration: BootcampRegistration,
         RegistrationApproved: RegistrationApproved,
+        RegistrationDeclined: RegistrationDeclined,
         AttendanceMarked: AttendanceMarked,
         StudentsCertified: StudentsCertified,
         SponsorshipAddressSet: SponsorshipAddressSet,
@@ -299,6 +300,12 @@ pub mod AttenSysOrg {
 
     #[derive(Drop, starknet::Event)]
     pub struct RegistrationApproved {
+        pub student_address: ContractAddress,
+        pub bootcamp_id: u64,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct RegistrationDeclined {
         pub student_address: ContractAddress,
         pub bootcamp_id: u64,
     }
@@ -682,9 +689,11 @@ pub mod AttenSysOrg {
             };
         }
 
-        fn register_for_bootcamp(ref self: ContractState, org_: ContractAddress, bootcamp_id: u64) {
+        fn register_for_bootcamp(
+            ref self: ContractState, org_: ContractAddress, bootcamp_id: u64, student_uri: ByteArray
+        ) {
             let caller = get_caller_address();
-            let status: bool = self.created_status.entry(caller).read();
+            let status: bool = self.created_status.entry(org_).read();
             // check org is created
             if status {
                 let mut bootcamp = self.org_to_bootcamps.entry(org_);
@@ -697,6 +706,7 @@ pub mod AttenSysOrg {
                                     .num_of_bootcamps_registered_for = student
                                     .num_of_bootcamps_registered_for
                                     + 1;
+                                student.student_details_uri = student_uri.clone();
                                 self.student_info.entry(caller).write(student);
                                 self
                                     .org_to_requests
@@ -710,7 +720,12 @@ pub mod AttenSysOrg {
                                                 .entry(caller)
                                                 .read()
                                                 .num_of_bootcamps_registered_for,
-                                            registered: false,
+                                            status: 0,
+                                            student_details_uri: self
+                                                .student_info
+                                                .entry(caller)
+                                                .read()
+                                                .student_details_uri
                                         }
                                     );
                             }
@@ -740,7 +755,7 @@ pub mod AttenSysOrg {
                                 .read()
                                 .address_of_student == student_address {
                                 let mut student = self.org_to_requests.entry(caller).at(i).read();
-                                student.registered = true;
+                                student.status = 1;
                                 self.org_to_requests.entry(caller).at(i).write(student);
 
                                 let mut the_bootcamp: Bootcamp = self
@@ -766,6 +781,40 @@ pub mod AttenSysOrg {
                 self
                     .emit(
                         RegistrationApproved {
+                            student_address: student_address, bootcamp_id: bootcamp_id
+                        }
+                    );
+            } else {
+                panic!("no organization created.");
+            }
+        }
+
+        fn decline_registration(
+            ref self: ContractState, student_address: ContractAddress, bootcamp_id: u64
+        ) {
+            let caller = get_caller_address();
+            let status: bool = self.created_status.entry(caller).read();
+            if status {
+                for i in 0
+                    ..self
+                        .org_to_requests
+                        .entry(caller)
+                        .len() {
+                            if self
+                                .org_to_requests
+                                .entry(caller)
+                                .at(i)
+                                .read()
+                                .address_of_student == student_address {
+                                let mut student = self.org_to_requests.entry(caller).at(i).read();
+                                student.status = 2;
+                                self.org_to_requests.entry(caller).at(i).write(student);
+                            }
+                        };
+
+                self
+                    .emit(
+                        RegistrationDeclined {
                             student_address: student_address, bootcamp_id: bootcamp_id
                         }
                     );
@@ -1105,8 +1154,6 @@ pub mod AttenSysOrg {
             bootcamp
         }
     }
-
-    //Free functions
 
     fn create_a_class(
         ref self: ContractState,

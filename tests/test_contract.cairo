@@ -2,7 +2,7 @@ use starknet::{ContractAddress, contract_address_const, ClassHash};
 // get_caller_address,
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global,
-    spy_events, EventSpyAssertionsTrait, test_address
+    spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address
 };
 
 
@@ -21,7 +21,7 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
     OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated,
-    ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved
+    ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved, RegistrationDeclined
 };
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
@@ -156,6 +156,7 @@ fn test_create_course() {
     let mut spy = spy_events();
 
     let token_uri_b: ByteArray = "https://dummy_uri.com/your_idb";
+    let token_uri_b_2: ByteArray = "https://dummy_uri.com/your_idb";
     let token_uri_b_2: ByteArray = "https://dummy_uri.com/your_idb";
     let nft_name_b = "cairo";
     let nft_symb_b = "CAO";
@@ -795,6 +796,7 @@ fn test_register_for_bootcamp() {
     let org_address: ContractAddress = org.address_of_org;
     let org_address_cp = org_address.clone();
     let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_clone: ByteArray = "https://dummy_uri.com";
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
 
@@ -803,11 +805,12 @@ fn test_register_for_bootcamp() {
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
 
-    dispatcher.register_for_bootcamp(org_address, 0);
+    dispatcher.register_for_bootcamp(org_address, 0, token_uri_clone);
 
-    // org_address: org_,
-    // instructor_address: instructor_,
-    // bootcamp_id: bootcamp_id
+    let all_request = dispatcher.get_all_registration_request(owner_address);
+    let status:u8 = *all_request[0].status;
+    assert(status == 0, 'not pending');
+
     spy
         .assert_emitted(
             @array![
@@ -823,6 +826,7 @@ fn test_register_for_bootcamp() {
 
 #[test]
 fn test_approve_registration() {
+    //set required addreses
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
@@ -834,6 +838,7 @@ fn test_approve_registration() {
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
     let student_address: ContractAddress = contract_address_const::<'candidate'>();
 
+    // setup dispatcher
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner_address);
     let org_name: ByteArray = "web3";
@@ -848,24 +853,31 @@ fn test_approve_registration() {
     let org_address: ContractAddress = org.address_of_org;
 
     let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_clone_c: ByteArray = "https://dummy_uri.com";
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
-
-    start_cheat_caller_address(contract_address, org_address);
     dispatcher
         .create_bootcamp(
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
+    stop_cheat_caller_address(contract_address);
 
     let student_address_cp = student_address.clone();
-    dispatcher.register_for_bootcamp(owner_address, 0);
+    start_cheat_caller_address(contract_address, student_address_cp);
+    dispatcher.register_for_bootcamp(owner_address, 0, token_uri_clone_c);
+    stop_cheat_caller_address(contract_address);
 
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher.approve_registration(student_address, 0);
+    stop_cheat_caller_address(contract_address);
 
     let updated_org = dispatcher.get_org_info(owner_address);
     let updated_org_num_of_students = updated_org.number_of_students;
     assert(updated_org_num_of_students == 1, 'inaccurate num of students');
+
+    let all_request = dispatcher.get_all_registration_request(owner_address);
+    let status:u8 = *all_request[0].status;
+    assert(status == 1, 'not approved');
 
     spy
         .assert_emitted(
@@ -874,6 +886,70 @@ fn test_approve_registration() {
                     contract_address,
                     Event::RegistrationApproved(
                         RegistrationApproved { student_address: student_address_cp, bootcamp_id: 0 }
+                    )
+                )
+            ]
+        );
+}
+
+#[test]
+fn test_decline_registration() {
+    //set required addreses
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+    );
+    let mut spy = spy_events();
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+    let student_address: ContractAddress = contract_address_const::<'candidate'>();
+
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    let mut arr_of_instructors: Array<ContractAddress> = array![];
+    arr_of_instructors.append(instructor_address);
+    dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_clone_c: ByteArray = "https://dummy_uri.com";
+    let nft_name: ByteArray = "cairo";
+    let nft_symb: ByteArray = "CAO";
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+        );
+    stop_cheat_caller_address(contract_address);
+
+    let student_address_cp = student_address.clone();
+    start_cheat_caller_address(contract_address, student_address_cp);
+    dispatcher.register_for_bootcamp(owner_address, 0, token_uri_clone_c);
+    stop_cheat_caller_address(contract_address);
+
+    start_cheat_caller_address(contract_address, owner_address);
+    dispatcher.decline_registration(student_address, 0);
+    stop_cheat_caller_address(contract_address);
+
+    let all_request = dispatcher.get_all_registration_request(owner_address);
+    let status:u8 = *all_request[0].status;
+    assert(status == 2, 'not declined');
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    Event::RegistrationDeclined(
+                        RegistrationDeclined { student_address: student_address_cp, bootcamp_id: 0 }
                     )
                 )
             ]
