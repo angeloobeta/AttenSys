@@ -31,11 +31,7 @@ pub trait IAttenSysOrg<TContractState> {
         org_address: ContractAddress,
         bootcamp_id: u64
     );
-    fn register_for_bootcamp(
-        ref self: TContractState,
-        org_: ContractAddress,
-        bootcamp_id: u64
-    );
+    fn register_for_bootcamp(ref self: TContractState, org_: ContractAddress, bootcamp_id: u64);
     fn approve_registration(
         ref self: TContractState, student_address: ContractAddress, bootcamp_id: u64
     );
@@ -201,6 +197,14 @@ pub mod AttenSysOrg {
         pub address_of_student: ContractAddress,
         pub num_of_bootcamps_registered_for: u256,
         pub registered: bool,
+    }
+
+    #[derive(Drop)]
+    enum Coin {
+        Penny,
+        Nickel,
+        Dime,
+        Quarter,
     }
 
     #[event]
@@ -678,11 +682,7 @@ pub mod AttenSysOrg {
             };
         }
 
-        fn register_for_bootcamp(
-            ref self: ContractState,
-            org_: ContractAddress,
-            bootcamp_id: u64
-        ) {
+        fn register_for_bootcamp(ref self: ContractState, org_: ContractAddress, bootcamp_id: u64) {
             let caller = get_caller_address();
             let status: bool = self.created_status.entry(caller).read();
             // check org is created
@@ -716,13 +716,7 @@ pub mod AttenSysOrg {
                             }
                         };
 
-                self
-                    .emit(
-                        BootcampRegistration {
-                            org_address: org_,
-                            bootcamp_id: bootcamp_id
-                        }
-                    );
+                self.emit(BootcampRegistration { org_address: org_, bootcamp_id: bootcamp_id });
             } else {
                 panic!("not part of organization.");
             }
@@ -733,8 +727,6 @@ pub mod AttenSysOrg {
         ) {
             let caller = get_caller_address();
             let status: bool = self.created_status.entry(caller).read();
-
-            let mut arr_of_request = array![];
             if status {
                 for i in 0
                     ..self
@@ -749,7 +741,7 @@ pub mod AttenSysOrg {
                                 .address_of_student == student_address {
                                 let mut student = self.org_to_requests.entry(caller).at(i).read();
                                 student.registered = true;
-                                self.org_to_requests.entry(caller).append().write(student);
+                                self.org_to_requests.entry(caller).at(i).write(student);
 
                                 let mut the_bootcamp: Bootcamp = self
                                     .org_to_bootcamps
@@ -759,10 +751,12 @@ pub mod AttenSysOrg {
 
                                 the_bootcamp.number_of_students = the_bootcamp.number_of_students
                                     + 1;
-
-                                self.org_to_bootcamps.entry(caller).append().write(the_bootcamp);
+                                self
+                                    .org_to_bootcamps
+                                    .entry(caller)
+                                    .at(bootcamp_id)
+                                    .write(the_bootcamp);
                             }
-                            arr_of_request.append(self.org_to_requests.entry(caller).at(i).read());
                             // update organization and instructor data
                             let mut org = self.organization_info.entry(caller).read();
                             org.number_of_students = org.number_of_students + 1;

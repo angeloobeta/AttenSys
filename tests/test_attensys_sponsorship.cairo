@@ -43,14 +43,13 @@ fn deposit(
     token_contract_dispatcher.approve(sponsor_contract_address, 20000);
     stop_cheat_caller_address(token_contract_address);
 
-
-     // set up the dispatcher for sponsor contract
+    // set up the dispatcher for sponsor contract
     //  call the deposit function from the sponsor
     let sponsor_dispatcher = IAttenSysSponsorDispatcher {
         contract_address: sponsor_contract_address
     };
 
-     // interact with sponsor contract
+    // interact with sponsor contract
     start_cheat_caller_address(sponsor_contract_address, caller);
     let sponsor_dispatcher = IAttenSysSponsorDispatcher {
         contract_address: sponsor_contract_address
@@ -59,7 +58,10 @@ fn deposit(
     stop_cheat_caller_address(sponsor_contract_address);
 
     assert(token_contract_dispatcher.balanceOf(caller) == 0, 'Deposit successful');
-    assert(token_contract_dispatcher.balanceOf(sponsor_contract_address) == 20000, 'Sponsorship updated');
+    assert(
+        token_contract_dispatcher.balanceOf(sponsor_contract_address) == 20000,
+        'Sponsorship updated'
+    );
 }
 
 fn withdraw(
@@ -67,7 +69,7 @@ fn withdraw(
     sponsor_contract_address: ContractAddress,
     caller: ContractAddress
 ) {
-     // set up the dispatcher for token contract
+    // set up the dispatcher for token contract
     let token_contract_dispatcher = IERC20Dispatcher { contract_address: token_contract_address };
 
     // setup dispatcher for sponsor
@@ -81,7 +83,9 @@ fn withdraw(
     stop_cheat_caller_address(sponsor_contract_address);
 
     assert(token_contract_dispatcher.balanceOf(caller) == 20000, 'Deposit successful');
-    assert(token_contract_dispatcher.balanceOf(sponsor_contract_address) == 0, 'Sponsorship updated');
+    assert(
+        token_contract_dispatcher.balanceOf(sponsor_contract_address) == 0, 'Sponsorship updated'
+    );
 }
 
 #[test]

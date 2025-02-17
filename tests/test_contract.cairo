@@ -187,15 +187,23 @@ fn test_create_course() {
                             base_uri: token_uri_a.clone(),
                             name_: nft_name_a,
                             symbol: nft_symb_a,
-                            course_ipfs_uri : token_uri_a.clone()
+                            course_ipfs_uri: token_uri_a.clone()
                         }
                     )
                 )
             ]
         );
     dispatcher
-        .create_course(owner_address, true, token_uri_b.clone(), nft_name_b.clone(), nft_symb_b.clone(), token_uri_b_2.clone());
-    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
+        .create_course(
+            owner_address,
+            true,
+            token_uri_b.clone(),
+            nft_name_b.clone(),
+            nft_symb_b.clone(),
+            token_uri_b_2.clone()
+        );
+    dispatcher
+        .create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
 
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
     let token_uri_11: ByteArray = "https://dummy_uri.com/your_idS";
@@ -242,8 +250,10 @@ fn test_finish_course_n_claim() {
     let nft_name_a = "cairo_a";
     let nft_symb_a = "CAO";
     start_cheat_caller_address(contract_address, owner_address);
-    dispatcher.create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a, token_uri_a_1);
-    dispatcher.create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
+    dispatcher
+        .create_course(owner_address, true, token_uri_a, nft_name_a, nft_symb_a, token_uri_a_1);
+    dispatcher
+        .create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
 
     let token_uri: ByteArray = "https://dummy_uri.com/your_idS";
     let token_uri_2: ByteArray = "https://dummy_uri.com/your_idS";
@@ -804,10 +814,7 @@ fn test_register_for_bootcamp() {
                 (
                     contract_address,
                     Event::BootcampRegistration(
-                        BootcampRegistration {
-                            org_address: org_address_cp,
-                            bootcamp_id: 0
-                        }
+                        BootcampRegistration { org_address: org_address_cp, bootcamp_id: 0 }
                     )
                 )
             ]
