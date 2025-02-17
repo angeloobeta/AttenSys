@@ -777,6 +777,7 @@ fn test_register_for_bootcamp() {
     let org_address: ContractAddress = org.address_of_org;
     let org_address_cp = org_address.clone();
     let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_clone: ByteArray = "https://dummy_uri.com";
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
 
@@ -785,7 +786,7 @@ fn test_register_for_bootcamp() {
             org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
         );
 
-    dispatcher.register_for_bootcamp(org_address, 0);
+    dispatcher.register_for_bootcamp(org_address, 0, token_uri_clone);
 
     // org_address: org_,
     // instructor_address: instructor_,
@@ -833,6 +834,7 @@ fn test_approve_registration() {
     let org_address: ContractAddress = org.address_of_org;
 
     let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_clone_c: ByteArray = "https://dummy_uri.com";
     let nft_name: ByteArray = "cairo";
     let nft_symb: ByteArray = "CAO";
 
@@ -843,7 +845,7 @@ fn test_approve_registration() {
         );
 
     let student_address_cp = student_address.clone();
-    dispatcher.register_for_bootcamp(owner_address, 0);
+    dispatcher.register_for_bootcamp(owner_address, 0, token_uri_clone_c);
 
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher.approve_registration(student_address, 0);
