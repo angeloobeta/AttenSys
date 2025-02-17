@@ -34,11 +34,13 @@ pub trait IAttenSysOrg<TContractState> {
     fn register_for_bootcamp(
         ref self: TContractState,
         org_: ContractAddress,
-        bootcamp_id: u64
+        bootcamp_id: u64,
+        student_uri: ByteArray,
     );
     fn approve_registration(
         ref self: TContractState, student_address: ContractAddress, bootcamp_id: u64
     );
+//@todo add decline application function 
     fn mark_attendance_for_a_class(
         ref self: TContractState, org_: ContractAddress, instructor_: ContractAddress, class_id: u64
     );
@@ -77,6 +79,7 @@ pub trait IAttenSysOrg<TContractState> {
     ) -> Array<AttenSysOrg::Class>;
     fn get_org_info(self: @TContractState, org_: ContractAddress) -> AttenSysOrg::Organization;
     fn get_all_org_info(self: @TContractState) -> Array<AttenSysOrg::Organization>;
+//@todo narrow down the student info to specific organization 
     fn get_student_info(self: @TContractState, student_: ContractAddress) -> AttenSysOrg::Student;
     fn get_student_classes(
         self: @TContractState, student: ContractAddress
@@ -201,6 +204,7 @@ pub mod AttenSysOrg {
         pub address_of_student: ContractAddress,
         pub num_of_bootcamps_registered_for: u256,
         pub registered: bool,
+        student_details_uri: ByteArray,
     }
 
     #[event]
@@ -681,7 +685,8 @@ pub mod AttenSysOrg {
         fn register_for_bootcamp(
             ref self: ContractState,
             org_: ContractAddress,
-            bootcamp_id: u64
+            bootcamp_id: u64,
+            student_uri : ByteArray
         ) {
             let caller = get_caller_address();
             let status: bool = self.created_status.entry(caller).read();
@@ -697,6 +702,7 @@ pub mod AttenSysOrg {
                                     .num_of_bootcamps_registered_for = student
                                     .num_of_bootcamps_registered_for
                                     + 1;
+                                student.student_details_uri = student_uri.clone();
                                 self.student_info.entry(caller).write(student);
                                 self
                                     .org_to_requests
@@ -711,6 +717,10 @@ pub mod AttenSysOrg {
                                                 .read()
                                                 .num_of_bootcamps_registered_for,
                                             registered: false,
+                                            student_details_uri : self
+                                            .student_info
+                                            .entry(caller)
+                                            .read().student_details_uri
                                         }
                                     );
                             }
@@ -731,6 +741,7 @@ pub mod AttenSysOrg {
         fn approve_registration(
             ref self: ContractState, student_address: ContractAddress, bootcamp_id: u64
         ) {
+//@todo restrict the caller
             let caller = get_caller_address();
             let status: bool = self.created_status.entry(caller).read();
 
