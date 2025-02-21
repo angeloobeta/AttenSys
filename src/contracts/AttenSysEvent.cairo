@@ -48,6 +48,7 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn sponsor_event(ref self: TContractState, event: ContractAddress, amt: u256, uri: ByteArray);
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
+    fn toggle_event_status(ref self: TContractState, event_identifier: u256);
 }
 
 #[starknet::interface]
@@ -129,6 +130,7 @@ mod AttenSysEvent {
         pub event_organizer: ContractAddress,
         pub registered_attendants: u256,
         pub event_uri: ByteArray,
+        pub is_suspended: bool,
     }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -209,6 +211,7 @@ mod AttenSysEvent {
                 event_organizer: owner_,
                 registered_attendants: 0,
                 event_uri: event_uri.clone(),
+                is_suspended: false,
             };
 
             // constructor arguments
@@ -238,7 +241,8 @@ mod AttenSysEvent {
                         event_organizer: owner_,
                         registered_attendants: 0,
                         event_uri: event_uri,
-                    },
+                        is_suspended: false,
+                    }
                 );
             self.event_identifier.write(new_identifier);
             self.track_minted_nft_id.entry((new_identifier, deployed_contract_address)).write(1);
@@ -554,6 +558,18 @@ mod AttenSysEvent {
 
             self.emit(Withdrawn { amt, event });
         }
+
+        fn toggle_event_status(ref self: ContractState, event_identifier: u256) {
+            self.only_admin();
+            let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+
+            let current_status = event_details.is_suspended;
+            self
+                .specific_event_with_identifier
+                .entry(event_identifier)
+                .is_suspended
+                .write(!current_status);
+        }
     }
 
     #[generate_trait]
@@ -585,6 +601,10 @@ mod AttenSysEvent {
 
         fn zero_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<0>()
+        }
+
+        fn only_admin(self: @ContractState) {
+            assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
         }
     }
 }
