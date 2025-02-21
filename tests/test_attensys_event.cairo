@@ -159,8 +159,8 @@ fn test_claim_admin_should_panic_for_wrong_new_admin() {
     attensys_course_contract.claim_admin_ownership();
     stop_cheat_caller_address(contract_address);
 }
-//#[test]
-//#[should_createnew(expected: 'unauthorized caller')]
+#[test]
+#[should_createnew(expected: 'unauthorized caller')]
 //fn test_create_event() {
 //  let contract_address = deploy_contract("AttenSysEvent");
 //let owner = get_contract_address();

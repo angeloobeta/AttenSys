@@ -372,6 +372,7 @@ fn test_create_event() {
     let event_name = "web3";
     let nft_name = "onlydust";
     let nft_symb = "OD";
+    let event_uri: ByteArray = "QmExampleIPFSHash";
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher
         .create_event(
@@ -382,7 +383,8 @@ fn test_create_event() {
             nft_symb,
             2238493,
             32989989,
-            true
+            true,
+            event_uri.clone()
         );
     let event_details_check = dispatcher.get_event_details(1);
     assert(event_details_check.event_name == event_name, 'wrong_name');
@@ -390,12 +392,15 @@ fn test_create_event() {
     assert(event_details_check.time.start_time == 2238493, 'wrong start');
     assert(event_details_check.time.end_time == 32989989, 'wrong end');
     assert(event_details_check.event_organizer == owner_address, 'wrong owner');
+    assert(event_details_check.event_uri == event_uri, 'wrong uri');
 
     start_cheat_caller_address(contract_address, owner_address_two);
     let token_uri_two: ByteArray = "https://dummy_uri.com/your_id";
     let event_name_two = "web2";
     let nft_name_two = "web3bridge";
     let nft_symb_two = "wb3";
+    let event_uri: ByteArray = "QmYwAPJzv5CZsnAzt8auVZRnHJxF8d1swomC5nKkJY6Y3A";
+
     dispatcher
         .create_event(
             owner_address_two,
@@ -405,7 +410,8 @@ fn test_create_event() {
             nft_symb_two,
             2238493,
             32989989,
-            true
+            true,
+            event_uri
         );
 
     let event_details_check_two = dispatcher.get_event_details(2);
@@ -430,10 +436,20 @@ fn test_reg_nd_mark() {
     let event_name = "web3";
     let nft_name = "onlydust";
     let nft_symb = "OD";
+    let event_uri: ByteArray = "QmExampleIPFSHash";
+
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher
         .create_event(
-            owner_address, event_name.clone(), token_uri, nft_name, nft_symb, 223, 329, true
+            owner_address,
+            event_name.clone(),
+            token_uri,
+            nft_name,
+            nft_symb,
+            223,
+            329,
+            true,
+            event_uri
         );
 
     start_cheat_block_timestamp_global(55555);
@@ -808,7 +824,7 @@ fn test_register_for_bootcamp() {
     dispatcher.register_for_bootcamp(org_address, 0, token_uri_clone);
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-    let status:u8 = *all_request[0].status;
+    let status: u8 = *all_request[0].status;
     assert(status == 0, 'not pending');
 
     spy
@@ -876,7 +892,7 @@ fn test_approve_registration() {
     assert(updated_org_num_of_students == 1, 'inaccurate num of students');
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-    let status:u8 = *all_request[0].status;
+    let status: u8 = *all_request[0].status;
     assert(status == 1, 'not approved');
 
     spy
@@ -940,7 +956,7 @@ fn test_decline_registration() {
     stop_cheat_caller_address(contract_address);
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-    let status:u8 = *all_request[0].status;
+    let status: u8 = *all_request[0].status;
     assert(status == 2, 'not declined');
 
     spy
@@ -1061,10 +1077,7 @@ fn test_claim_org_admin() {
     start_cheat_caller_address(contract_address, new_admin);
     dispatcher.claim_admin_ownership();
     assert(dispatcher.get_admin() == new_admin, 'admin claim failed');
-    assert(
-        dispatcher.get_new_admin() == contract_address_const::<0>(),
-        'admin claim failed'
-    );
+    assert(dispatcher.get_new_admin() == contract_address_const::<0>(), 'admin claim failed');
     stop_cheat_caller_address(contract_address);
 }
 
@@ -1081,10 +1094,10 @@ fn test_transfer_org_admin_should_panic_for_wrong_admin() {
     let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
     // setup dispatcher
     let dispatcher = IAttenSysOrgDispatcher { contract_address };
-     // Wrong admin transfers admin rights to new_admin: should revert
-     start_cheat_caller_address(contract_address, invalid_admin);
-     dispatcher.transfer_admin(new_admin);
-     stop_cheat_caller_address(contract_address);
+    // Wrong admin transfers admin rights to new_admin: should revert
+    start_cheat_caller_address(contract_address, invalid_admin);
+    dispatcher.transfer_admin(new_admin);
+    stop_cheat_caller_address(contract_address);
 }
 
 #[test]
@@ -1113,5 +1126,4 @@ fn test_claim_org_admin_should_panic_for_wrong_new_admin() {
     start_cheat_caller_address(contract_address, wrong_new_admin);
     dispatcher.claim_admin_ownership();
     stop_cheat_caller_address(contract_address);
-   
 }
