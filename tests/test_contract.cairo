@@ -367,12 +367,15 @@ fn test_create_event() {
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let owner_address_two: ContractAddress = contract_address_const::<'owner_two'>();
+    let owner_address_three: ContractAddress = contract_address_const::<'owner_three'>();
     let dispatcher = IAttenSysEventDispatcher { contract_address };
     let token_uri: ByteArray = "https://dummy_uri.com/your_id";
     let event_name = "web3";
     let nft_name = "onlydust";
     let nft_symb = "OD";
     let event_uri: ByteArray = "QmExampleIPFSHash";
+
+    // Create first event
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher
         .create_event(
@@ -387,6 +390,7 @@ fn test_create_event() {
             event_uri.clone()
         );
     let event_details_check = dispatcher.get_event_details(1);
+    //println!("Event URI: {:?}", event_details_check.event_uri);
     assert(event_details_check.event_name == event_name, 'wrong_name');
     assert(event_details_check.time.registration_open == true, 'not set');
     assert(event_details_check.time.start_time == 2238493, 'wrong start');
@@ -394,12 +398,14 @@ fn test_create_event() {
     assert(event_details_check.event_organizer == owner_address, 'wrong owner');
     assert(event_details_check.event_uri == event_uri, 'wrong uri');
 
+    // Create second event
+
     start_cheat_caller_address(contract_address, owner_address_two);
     let token_uri_two: ByteArray = "https://dummy_uri.com/your_id";
     let event_name_two = "web2";
     let nft_name_two = "web3bridge";
     let nft_symb_two = "wb3";
-    let event_uri: ByteArray = "QmYwAPJzv5CZsnAzt8auVZRnHJxF8d1swomC5nKkJY6Y3A";
+    let event_uri_two: ByteArray = "QmYwAPJzv5CZsnAzt8auVZRnHJxF8d1swomC5nKkJY6Y3A";
 
     dispatcher
         .create_event(
@@ -411,12 +417,38 @@ fn test_create_event() {
             2238493,
             32989989,
             true,
-            event_uri.clone()
+            event_uri_two.clone()
         );
 
     let event_details_check_two = dispatcher.get_event_details(2);
     assert(event_details_check_two.event_name == event_name_two, 'wrong_name');
-    assert(event_details_check.event_uri == event_uri, 'wrong uri');
+    assert(event_details_check_two.event_uri == event_uri_two, 'wrongg uri');
+
+    // Create third event without event uri
+
+    start_cheat_caller_address(contract_address, owner_address_three);
+    let token_uri_three: ByteArray = "https://dummy_uri.com/your_id";
+    let event_name_three = "web4";
+    let nft_name_three = "frankyaccess";
+    let nft_symb_three = "fac";
+    let event_uri_3: ByteArray = "a";
+
+    dispatcher
+        .create_event(
+            owner_address_three,
+            event_name_three.clone(),
+            token_uri_three,
+            nft_name_three,
+            nft_symb_three,
+            2238493,
+            32989989,
+            true,
+            event_uri_3.clone()
+        );
+
+    let event_details_check_three = dispatcher.get_event_details(3);
+    assert(event_details_check_three.event_name == event_name_three, 'wrong_name');
+    assert(event_details_check_three.event_uri == event_uri_3, 'wronggg uri');
 }
 
 #[test]
