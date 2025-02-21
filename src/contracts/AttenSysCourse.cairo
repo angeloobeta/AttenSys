@@ -42,6 +42,9 @@ pub trait IAttenSysCourse<TContractState> {
     fn get_admin(self: @TContractState) -> ContractAddress;
     fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn get_total_course_completions(self: @TContractState, course_identifier: u256) -> u256;
+    fn ensure_admin(self: @TContractState);
+    fn suspend_course(ref self: TContractState, course_identifier: u256);
+    fn unsuspend_course(ref self: TContractState, course_identifier: u256);
 }
 
 //Todo, make a count of the total number of users that finished the course.
@@ -72,6 +75,8 @@ pub mod AttenSysCourse {
         CourseReplaced: CourseReplaced,
         CourseCertClaimed: CourseCertClaimed,
         AdminTransferred: AdminTransferred,
+        CourseSuspended: CourseSuspended,
+        CourseUnsuspended: CourseUnsuspended,
     }
 
     #[derive(starknet::Event, Clone, Debug, Drop)]
@@ -103,6 +108,18 @@ pub mod AttenSysCourse {
     pub struct AdminTransferred {
         pub new_admin: ContractAddress,
     }
+    
+    #[derive(starknet::Event, Clone, Debug, Drop)]
+    pub struct CourseSuspended {
+        course_identifier: u256,
+        
+    }
+
+    #[derive(starknet::Event, Clone, Debug, Drop)]
+    pub struct CourseUnsuspended {
+        course_identifier: u256,
+
+    }
 
     #[storage]
     struct Storage {
@@ -130,6 +147,7 @@ pub mod AttenSysCourse {
         course_nft_contract_address: Map::<u256, ContractAddress>,
         //tracks all minted nft id minted by events
         track_minted_nft_id: Map::<(u256, ContractAddress), u256>,
+        course_suspended: Map::<u256, bool>,
     }
     //find a way to keep track of all course identifiers for each owner.
     #[derive(Drop, Serde, starknet::Store)]
@@ -461,6 +479,37 @@ pub mod AttenSysCourse {
                 next_nft_id - 1
             }
         }
+        fn ensure_admin(self: @ContractState) {
+            let caller = get_caller_address();
+            assert(caller == self.get_admin(), 'Not admin');
+        }
+        fn suspend_course(ref self: ContractState, course_identifier: u256){
+            self.ensure_admin();
+
+            let suspension_status = self.course_suspended.entry(course_identifier).read();
+            assert(suspension_status == false,'Already suspended');
+
+            self.course_suspended.entry(course_identifier).write(true);
+
+            self.emit(
+                CourseSuspended{
+                    course_identifier: course_identifier
+                });            
+        } 
+        fn unsuspend_course(ref self: ContractState, course_identifier: u256){
+            self.ensure_admin();
+
+            let suspension_status = self.course_suspended.entry(course_identifier).read();
+            assert(suspension_status == true,'Already unsuspended');
+
+            self.course_suspended.entry(course_identifier).write(false);
+
+            self.emit(
+                CourseUnsuspended{
+                    course_identifier: course_identifier
+                });            
+        }       
+        
     }
 
     #[generate_trait]
