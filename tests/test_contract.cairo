@@ -411,11 +411,12 @@ fn test_create_event() {
             2238493,
             32989989,
             true,
-            event_uri
+            event_uri.clone()
         );
 
     let event_details_check_two = dispatcher.get_event_details(2);
     assert(event_details_check_two.event_name == event_name_two, 'wrong_name');
+    assert(event_details_check.event_uri == event_uri, 'wrong uri');
 }
 
 #[test]
