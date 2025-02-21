@@ -231,11 +231,11 @@ fn test_cannot_suspend_already_suspended_course() {
     let contract_address = deploy_contract("AttenSysCourse", hash);
     let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
 
-    let owner: ContractAddress = contract_address_const::<'owner'>();
+    let admin: ContractAddress = contract_address_const::<'admin'>();
     let course_id: u256 = 1;
 
-    start_cheat_caller_address(contract_address, owner);
-    attensys_course_contract.create_course(owner, true, "https://example.com/", "Test Course", "TC", "https://example.com/");
+    start_cheat_caller_address(contract_address, admin);
+    attensys_course_contract.create_course(admin, true, "https://example.com/", "Test Course", "TC", "https://example.com/");
     
     attensys_course_contract.suspend_course(course_id);
     attensys_course_contract.suspend_course(course_id); // Should fail
@@ -248,11 +248,11 @@ fn test_cannot_unsuspend_already_unsuspended_course() {
     let contract_address = deploy_contract("AttenSysCourse", hash);
     let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
 
-    let owner: ContractAddress = contract_address_const::<'owner'>();
+    let admin: ContractAddress = contract_address_const::<'admin'>();
     let course_id: u256 = 1;
 
-    start_cheat_caller_address(contract_address, owner);
-    attensys_course_contract.create_course(owner, true, "https://example.com/", "Test Course", "TC", "https://example.com/");
+    start_cheat_caller_address(contract_address, admin);
+    attensys_course_contract.create_course(admin, true, "https://example.com/", "Test Course", "TC", "https://example.com/");
     
     attensys_course_contract.unsuspend_course(course_id); // Should fail
 }
