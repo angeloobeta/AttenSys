@@ -1015,3 +1015,103 @@ fn test_when_no_org_address_add_instructor_to_org() {
     dispatcher.add_instructor_to_org(arr_of_instructors, org_name);
 }
 
+#[test]
+fn test_transfer_org_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+    );
+    let admin: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    assert(dispatcher.get_admin() == admin, 'wrong admin');
+
+    start_cheat_caller_address(contract_address, admin);
+
+    dispatcher.transfer_admin(new_admin);
+    assert(dispatcher.get_new_admin() == new_admin, 'wrong intended admin');
+
+    stop_cheat_caller_address(contract_address)
+}
+
+#[test]
+fn test_claim_org_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+    );
+    let admin: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    assert(dispatcher.get_admin() == admin, 'wrong admin');
+
+    // Admin transfers admin rights to new_admin
+    start_cheat_caller_address(contract_address, admin);
+    dispatcher.transfer_admin(new_admin);
+    assert(dispatcher.get_new_admin() == new_admin, 'wrong intended admin');
+    stop_cheat_caller_address(contract_address);
+
+    // New admin claims admin rights
+    start_cheat_caller_address(contract_address, new_admin);
+    dispatcher.claim_admin_ownership();
+    assert(dispatcher.get_admin() == new_admin, 'admin claim failed');
+    assert(
+        dispatcher.get_new_admin() == contract_address_const::<0>(),
+        'admin claim failed'
+    );
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+#[should_panic(expected: 'unauthorized caller')]
+fn test_transfer_org_admin_should_panic_for_wrong_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+    );
+    let invalid_admin: ContractAddress = contract_address_const::<'invalid_admin'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+     // Wrong admin transfers admin rights to new_admin: should revert
+     start_cheat_caller_address(contract_address, invalid_admin);
+     dispatcher.transfer_admin(new_admin);
+     stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+#[should_panic(expected: 'unauthorized caller')]
+fn test_claim_org_admin_should_panic_for_wrong_new_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+    );
+    let admin: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    let wrong_new_admin: ContractAddress = contract_address_const::<'wrong_new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+
+    assert(dispatcher.get_admin() == admin, 'wrong admin');
+
+    // Admin transfers admin rights to new_admin
+    start_cheat_caller_address(contract_address, admin);
+    dispatcher.transfer_admin(new_admin);
+    stop_cheat_caller_address(contract_address);
+
+    // Wrong new admin claims admin rights: should panic
+    start_cheat_caller_address(contract_address, wrong_new_admin);
+    dispatcher.claim_admin_ownership();
+    stop_cheat_caller_address(contract_address);
+   
+}
