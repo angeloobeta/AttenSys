@@ -49,6 +49,7 @@ pub trait IAttenSysEvent<TContractState> {
     fn sponsor_event(ref self: TContractState, event: ContractAddress, amt: u256, uri: ByteArray);
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
     fn toggle_event_status(ref self: TContractState, event_identifier: u256);
+    fn get_event_suspended_status(self: @TContractState, event_identifier: u256) -> bool;
 }
 
 #[starknet::interface]
@@ -569,6 +570,10 @@ mod AttenSysEvent {
                 .entry(event_identifier)
                 .is_suspended
                 .write(!current_status);
+        }
+
+        fn get_event_suspended_status(self: @ContractState, event_identifier: u256) -> bool {
+            self.specific_event_with_identifier.entry(event_identifier).read().is_suspended
         }
     }
 
