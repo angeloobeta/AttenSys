@@ -48,7 +48,7 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn sponsor_event(ref self: TContractState, event: ContractAddress, amt: u256, uri: ByteArray);
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
-    fn toggle_event_status(ref self: TContractState, event_identifier: u256);
+    fn toggle_event_suspended_status(ref self: TContractState, event_identifier: u256);
     fn get_event_suspended_status(self: @TContractState, event_identifier: u256) -> bool;
 }
 
@@ -560,7 +560,7 @@ mod AttenSysEvent {
             self.emit(Withdrawn { amt, event });
         }
 
-        fn toggle_event_status(ref self: ContractState, event_identifier: u256) {
+        fn toggle_event_suspended_status(ref self: ContractState, event_identifier: u256) {
             self.only_admin();
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
 

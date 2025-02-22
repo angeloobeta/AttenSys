@@ -192,12 +192,12 @@ fn test_toggle_event_status() {
     assert(event_details.is_suspended == false, 'event is suspended');
     assert(attensys_event_contract.get_event_suspended_status(1) == false, 'event is suspended');
 
-    attensys_event_contract.toggle_event_status(1);
+    attensys_event_contract.toggle_event_suspended_status(1);
     let event_details = attensys_event_contract.get_event_details(1);
     assert(event_details.is_suspended == true, 'event is not suspended');
     assert(attensys_event_contract.get_event_suspended_status(1) == true, 'event is not suspended');
 
-    attensys_event_contract.toggle_event_status(1);
+    attensys_event_contract.toggle_event_suspended_status(1);
     let event_details = attensys_event_contract.get_event_details(1);
     assert(event_details.is_suspended == false, 'event is suspended');
     assert(attensys_event_contract.get_event_suspended_status(1) == false, 'event is suspended');
@@ -235,7 +235,7 @@ fn test_toggle_event_should_panic_for_wrong_admin() {
     let event_details = attensys_event_contract.get_event_details(1);
     assert(event_details.is_suspended == false, 'event is suspended');
 
-    attensys_event_contract.toggle_event_status(1);
+    attensys_event_contract.toggle_event_suspended_status(1);
     let event_details = attensys_event_contract.get_event_details(1);
     assert(event_details.is_suspended == true, 'event is not suspended');
 
