@@ -1355,11 +1355,4 @@ pub mod AttenSysOrg {
             contract_address_const::<0>()
         }
     }
-    
-    #[generate_trait]
-    impl InternalFunctions of InternalFunctionsTrait {
-        fn zero_address(self: @ContractState) -> ContractAddress {
-            contract_address_const::<0>()
-        }
-    }
 }
