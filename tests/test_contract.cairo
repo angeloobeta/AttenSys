@@ -23,7 +23,7 @@ use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
     OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated,
     ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved, RegistrationDeclined
 };
-// use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
+// use attendsys::contracts::AttenSysSponsor:: { AttenSysSponsor, IAttenSysSponsorDispatcher };
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
 // use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
@@ -32,6 +32,8 @@ use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
 use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
+use attendsys::contracts::mock::ERC20;
+use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
 #[starknet::interface]
 pub trait IERC721<TContractState> {
@@ -63,6 +65,22 @@ pub trait IERC721<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, token_id: u256);
 }
 
+// fn deploy_erc20_token() -> ContractAddress{
+//     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+//     let initial_supply: u256 = 1_000_000_u256;
+
+//     let contract_class = declare("ERC20").unwrap();
+
+//     let mut constructor_args = ArrayTrait::new();
+//     initial_supply.serialize(ref constructor_args);
+//     sponsor_address.serialize(ref constructor_args);
+
+//     let (contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+//     let balance = ERC20ABIDispatcher { contract_address }.balance_of(sponsor_address);
+//     assert(balance == initial_supply, 'Incorrect initial balance');
+//     contract_address
+// }
 
 fn deploy_contract(name: ByteArray, hash: ClassHash,) -> ContractAddress {
     let contract = declare(name).unwrap();
@@ -808,7 +826,7 @@ fn test_register_for_bootcamp() {
     dispatcher.register_for_bootcamp(org_address, 0, token_uri_clone);
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-    let status:u8 = *all_request[0].status;
+    let status: u8 = *all_request[0].status;
     assert(status == 0, 'not pending');
 
     spy
@@ -876,7 +894,7 @@ fn test_approve_registration() {
     assert(updated_org_num_of_students == 1, 'inaccurate num of students');
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-    let status:u8 = *all_request[0].status;
+    let status: u8 = *all_request[0].status;
     assert(status == 1, 'not approved');
 
     spy
@@ -940,7 +958,7 @@ fn test_decline_registration() {
     stop_cheat_caller_address(contract_address);
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-    let status:u8 = *all_request[0].status;
+    let status: u8 = *all_request[0].status;
     assert(status == 2, 'not declined');
 
     spy
@@ -1015,3 +1033,242 @@ fn test_when_no_org_address_add_instructor_to_org() {
     dispatcher.add_instructor_to_org(arr_of_instructors, org_name);
 }
 
+#[test]
+fn test_sponsor_organization() {
+    // Deploy NFT contract
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+
+    // deploy token
+    let initial_supply: u256 = 1_000_000_u256;
+    let contract_class = declare("ERC20").unwrap();
+
+    let mut constructor_args = ArrayTrait::new();
+    initial_supply.serialize(ref constructor_args);
+    sponsor_address.serialize(ref constructor_args);
+
+    let (token_contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let org_contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr
+    );
+
+    //deploy sponsor contract
+    let event_contract_address = contract_address_const::<'event_contract_address'>();
+    let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
+    let mut constructor_args = ArrayTrait::new();
+    org_contract_address.serialize(ref constructor_args);
+    event_contract_address.serialize(ref constructor_args);
+    
+    let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
+
+
+    let amount: u256 = 1000_u256;
+    let uri: ByteArray = "ipfs://sponsorship-proof";
+
+    // Setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address: org_contract_address };
+
+    // Create an organization
+    start_cheat_caller_address(org_contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xorgmetadata";
+    dispatcher.setSponsorShipAddress(sponsor_contract_address);
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    stop_cheat_caller_address(org_contract_address);
+
+    //approve contract to spend token
+    let token_dispatcher = ERC20ABIDispatcher { contract_address: token_contract_address };
+    start_cheat_caller_address(token_contract_address, sponsor_address);
+    token_dispatcher.approve(sponsor_contract_address, amount);
+    stop_cheat_caller_address(token_contract_address);
+    
+    let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
+    let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
+    println!("Allowance: {}", allowance);
+    println!("Sponsor balance: {}", sponsor_bal);
+
+    // Sponsor the organization
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+    start_cheat_caller_address(org_contract_address, sponsor_address);
+    dispatcher.sponsor_organization(org_address, uri.clone(), amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify sponsorship balance updated
+    let org_balance = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance = token_dispatcher.balance_of(sponsor_contract_address);
+
+    assert(org_balance == amount, 'wrong Org sponsorship bal');
+    assert(sponsorship_contract_balance == amount, 'Wrong Sponsor contract bal')
+}
+
+#[test]
+fn test_withdraw_sponsorship_fund() {
+    // Deploy NFT contract
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+
+    // deploy token
+    let initial_supply: u256 = 1_000_000_u256;
+    let contract_class = declare("ERC20").unwrap();
+
+    let mut constructor_args = ArrayTrait::new();
+    initial_supply.serialize(ref constructor_args);
+    sponsor_address.serialize(ref constructor_args);
+
+    let (token_contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let org_contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr
+    );
+
+    //deploy sponsor contract
+    let event_contract_address = contract_address_const::<'event_contract_address'>();
+    let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
+    let mut constructor_args = ArrayTrait::new();
+    org_contract_address.serialize(ref constructor_args);
+    event_contract_address.serialize(ref constructor_args);
+    
+    let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
+
+
+    let amount: u256 = 1000_u256;
+    let uri: ByteArray = "ipfs://sponsorship-proof";
+
+    // Setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address: org_contract_address };
+
+    // Create an organization
+    start_cheat_caller_address(org_contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xorgmetadata";
+    dispatcher.setSponsorShipAddress(sponsor_contract_address);
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    stop_cheat_caller_address(org_contract_address);
+
+    //approve contract to spend token
+    let token_dispatcher = ERC20ABIDispatcher { contract_address: token_contract_address };
+    start_cheat_caller_address(token_contract_address, sponsor_address);
+    token_dispatcher.approve(sponsor_contract_address, amount);
+    stop_cheat_caller_address(token_contract_address);
+    
+    let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
+    let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
+    println!("Allowance: {}", allowance);
+    println!("Sponsor balance: {}", sponsor_bal);
+
+    // Sponsor the organization
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+    start_cheat_caller_address(org_contract_address, sponsor_address);
+    dispatcher.sponsor_organization(org_address, uri.clone(), amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify sponsorship balance updated
+    let org_balance = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance = token_dispatcher.balance_of(sponsor_contract_address);
+
+    assert(org_balance == amount, 'wrong Org sponsorship bal');
+    assert(sponsorship_contract_balance == amount, 'Wrong Sponsor contract bal');
+
+
+    start_cheat_caller_address(org_contract_address, org_address);
+    dispatcher.withdraw_sponsorship_fund(amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify balances after withdrawal
+    let org_balance_after = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance_after = token_dispatcher.balance_of(sponsor_contract_address);
+    assert(org_balance_after == 0, 'sponsor bal not updated');
+    assert(sponsorship_contract_balance_after == 0, 'wrong Sponsor contr bal');
+}
+
+#[test]
+#[should_panic(expected: "not an organization")]
+fn test_withdraw_sponsorship_fund_unauthorized_caller() {
+    // Deploy NFT contract
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+    let unauthorized_caller: ContractAddress = contract_address_const::<'unauthorized_caller'>();
+
+    // deploy token
+    let initial_supply: u256 = 1_000_000_u256;
+    let contract_class = declare("ERC20").unwrap();
+
+    let mut constructor_args = ArrayTrait::new();
+    initial_supply.serialize(ref constructor_args);
+    sponsor_address.serialize(ref constructor_args);
+
+    let (token_contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let org_contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr
+    );
+
+    //deploy sponsor contract
+    let event_contract_address = contract_address_const::<'event_contract_address'>();
+    let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
+    let mut constructor_args = ArrayTrait::new();
+    org_contract_address.serialize(ref constructor_args);
+    event_contract_address.serialize(ref constructor_args);
+    
+    let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
+
+
+    let amount: u256 = 1000_u256;
+    let uri: ByteArray = "ipfs://sponsorship-proof";
+
+    // Setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address: org_contract_address };
+
+    // Create an organization
+    start_cheat_caller_address(org_contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xorgmetadata";
+    dispatcher.setSponsorShipAddress(sponsor_contract_address);
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    stop_cheat_caller_address(org_contract_address);
+
+    //approve contract to spend token
+    let token_dispatcher = ERC20ABIDispatcher { contract_address: token_contract_address };
+    start_cheat_caller_address(token_contract_address, sponsor_address);
+    token_dispatcher.approve(sponsor_contract_address, amount);
+    stop_cheat_caller_address(token_contract_address);
+    
+    let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
+    let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
+    println!("Allowance: {}", allowance);
+    println!("Sponsor balance: {}", sponsor_bal);
+
+    // Sponsor the organization
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+    start_cheat_caller_address(org_contract_address, sponsor_address);
+    dispatcher.sponsor_organization(org_address, uri.clone(), amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify sponsorship balance updated
+    let org_balance = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance = token_dispatcher.balance_of(sponsor_contract_address);
+
+    assert(org_balance == amount, 'wrong Org sponsorship bal');
+    assert(sponsorship_contract_balance == amount, 'Wrong Sponsor contract bal');
+
+
+    start_cheat_caller_address(org_contract_address, unauthorized_caller);
+    dispatcher.withdraw_sponsorship_fund(amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify balances after withdrawal
+    let org_balance_after = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance_after = token_dispatcher.balance_of(sponsor_contract_address);
+    assert(org_balance_after == 0, 'sponsor bal not updated');
+    assert(sponsorship_contract_balance_after == 0, 'wrong Sponsor contr bal');
+}

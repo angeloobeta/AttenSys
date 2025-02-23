@@ -54,7 +54,7 @@ fn deposit(
     let sponsor_dispatcher = IAttenSysSponsorDispatcher {
         contract_address: sponsor_contract_address
     };
-    sponsor_dispatcher.deposit(token_contract_address, 20000);
+    sponsor_dispatcher.deposit(caller, token_contract_address, 20000);
     stop_cheat_caller_address(sponsor_contract_address);
 
     assert(token_contract_dispatcher.balanceOf(caller) == 0, 'Deposit successful');
