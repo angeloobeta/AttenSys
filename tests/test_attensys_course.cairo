@@ -243,8 +243,10 @@ fn test_toggle_suspension() {
     attensys_course_contract.create_course(admin, true, base_uri, name, symbol, base_uri_2);
     // let current_suspension_status = attensys_course_contract.course_suspended.entry(1).read();
     
+    //newly created course.is_suspended should be false
     assert(attensys_course_contract.get_suspension_status(course_identifier) == false, 'course is suspended');
     attensys_course_contract.toggle_suspension(course_identifier);
+    //course.is_suspended should be true after toggle
     assert(attensys_course_contract.get_suspension_status(course_identifier) == true, 'course is not suspended');
 
     stop_cheat_caller_address(contract_address);
