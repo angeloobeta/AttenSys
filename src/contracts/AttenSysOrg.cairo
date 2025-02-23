@@ -90,6 +90,10 @@ pub trait IAttenSysOrg<TContractState> {
     fn get_bootcamp_info(
         self: @TContractState, org_: ContractAddress, bootcamp_id: u64
     ) -> AttenSysOrg::Bootcamp;
+    fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
+    fn claim_admin_ownership(ref self: TContractState);
+    fn get_admin(self: @TContractState) -> ContractAddress;
+    fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn get_org_sponsorship_balance(self: @TContractState, organization: ContractAddress) -> u256;
 }
 
@@ -99,7 +103,7 @@ pub trait IAttenSysOrg<TContractState> {
 #[starknet::contract]
 pub mod AttenSysOrg {
     use starknet::event::EventEmitter;
-    use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall};
+    use core::starknet::{ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall, contract_address_const};
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
         MutableVecTrait
@@ -151,6 +155,8 @@ pub mod AttenSysOrg {
         sponsorship_contract_address: ContractAddress,
         // AttenSys Admin
         admin: ContractAddress,
+         // address of intended new admin
+         intended_new_admin: ContractAddress,
         // map org to all requested registration
         org_to_requests: Map<ContractAddress, Vec<Student>>,
     }
@@ -1163,6 +1169,27 @@ pub mod AttenSysOrg {
         ) -> u256 {
             self.org_to_balance_of_sponsorship.entry(organization).read()
         }
+        fn transfer_admin(ref self: ContractState, new_admin: ContractAddress) {
+            assert(new_admin != self.zero_address(), 'zero address not allowed');
+            assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
+
+            self.intended_new_admin.write(new_admin);
+        }
+
+        fn claim_admin_ownership(ref self: ContractState) {
+            assert(get_caller_address() == self.intended_new_admin.read(), 'unauthorized caller');
+
+            self.admin.write(self.intended_new_admin.read());
+            self.intended_new_admin.write(self.zero_address());
+        }
+
+        fn get_admin(self: @ContractState) -> ContractAddress {
+            self.admin.read()
+        }
+
+        fn get_new_admin(self: @ContractState) -> ContractAddress {
+            self.intended_new_admin.read()
+        }
     }
 
     fn create_a_class(
@@ -1249,5 +1276,12 @@ pub mod AttenSysOrg {
     fn only_admin(ref self: ContractState) {
         let _caller = get_caller_address();
         // assert(caller == self.admin.read(), 'Not admin');
+    }
+    
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        fn zero_address(self: @ContractState) -> ContractAddress {
+            contract_address_const::<0>()
+        }
     }
 }
