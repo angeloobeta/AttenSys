@@ -1,4 +1,5 @@
 use starknet::{ContractAddress, contract_address_const, ClassHash};
+
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address
 };
@@ -200,7 +201,7 @@ fn test_get_total_course_completions() {
 
 #[test]
 #[should_panic(expected:'Not admin')]
-fn test_non_admin_cannot_suspend_course() {
+fn test_non_admin_cannot_suspend_or_unsuspend_course() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let contract_address = deploy_contract("AttenSysCourse", hash);
     let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
@@ -220,39 +221,32 @@ fn test_non_admin_cannot_suspend_course() {
 
     // Non-admin tries to suspend
     start_cheat_caller_address(contract_address, non_admin);
-    attensys_course_contract.suspend_course(course_id); // Should fail
+    attensys_course_contract.toggle_suspension(course_id); // Should fail
+    
 }
 
-
 #[test]
-#[should_panic(expected: 'Already suspended')]
-fn test_cannot_suspend_already_suspended_course() {
+fn test_toggle_suspension() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let contract_address = deploy_contract("AttenSysCourse", hash);
     let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
 
     let admin: ContractAddress = contract_address_const::<'admin'>();
-    let course_id: u256 = 1;
+    let course_identifier: u256 = 1;   
+    let base_uri: ByteArray = "https://example.com/";
+    let base_uri_2: ByteArray = "https://example.com/";
+    let name: ByteArray = "Test Course";
+    let symbol: ByteArray = "TC";
 
+    // Owner creates course
     start_cheat_caller_address(contract_address, admin);
-    attensys_course_contract.create_course(admin, true, "https://example.com/", "Test Course", "TC", "https://example.com/");
+    attensys_course_contract.create_course(admin, true, base_uri, name, symbol, base_uri_2);
+    // let current_suspension_status = attensys_course_contract.course_suspended.entry(1).read();
     
-    attensys_course_contract.suspend_course(course_id);
-    attensys_course_contract.suspend_course(course_id); // Should fail
+    assert(attensys_course_contract.get_suspension_status(course_identifier) == false, 'course is suspended');
+    attensys_course_contract.toggle_suspension(course_identifier);
+    assert(attensys_course_contract.get_suspension_status(course_identifier) == true, 'course is not suspended');
+
+    stop_cheat_caller_address(contract_address);
 }
 
-#[test]
-#[should_panic(expected:'Already unsuspended')]
-fn test_cannot_unsuspend_already_unsuspended_course() {
-    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
-    let contract_address = deploy_contract("AttenSysCourse", hash);
-    let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
-
-    let admin: ContractAddress = contract_address_const::<'admin'>();
-    let course_id: u256 = 1;
-
-    start_cheat_caller_address(contract_address, admin);
-    attensys_course_contract.create_course(admin, true, "https://example.com/", "Test Course", "TC", "https://example.com/");
-    
-    attensys_course_contract.unsuspend_course(course_id); // Should fail
-}
