@@ -1208,8 +1208,6 @@ fn test_withdraw_sponsorship_fund() {
     
     let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
     let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
-    println!("Allowance: {}", allowance);
-    println!("Sponsor balance: {}", sponsor_bal);
 
     // Sponsor the organization
     let org = dispatcher.get_org_info(owner_address);
@@ -1239,7 +1237,7 @@ fn test_withdraw_sponsorship_fund() {
 
 #[test]
 #[should_panic(expected: "not an organization")]
-fn test_withdraw_sponsorship_fund_unauthorized_caller() {
+fn test_withdraw_sponsorship_fund_unauthorized_caller_should_panic() {
     // Deploy NFT contract
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
@@ -1293,8 +1291,6 @@ fn test_withdraw_sponsorship_fund_unauthorized_caller() {
     
     let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
     let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
-    println!("Allowance: {}", allowance);
-    println!("Sponsor balance: {}", sponsor_bal);
 
     // Sponsor the organization
     let org = dispatcher.get_org_info(owner_address);
