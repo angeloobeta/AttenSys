@@ -1085,7 +1085,7 @@ fn test_when_no_org_address_add_instructor_to_org() {
 #[test]
 fn test_sponsor_organization() {
     // Deploy NFT contract
-    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
 
     // deploy token
@@ -1101,7 +1101,7 @@ fn test_sponsor_organization() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let org_contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr
+        "AttenSysOrg",hash, token_contract_address, sponsor_contract_addr
     );
 
     //deploy sponsor contract
@@ -1157,7 +1157,7 @@ fn test_sponsor_organization() {
 #[test]
 fn test_withdraw_sponsorship_fund() {
     // Deploy NFT contract
-    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
 
     // deploy token
@@ -1239,7 +1239,7 @@ fn test_withdraw_sponsorship_fund() {
 #[should_panic(expected: "not an organization")]
 fn test_withdraw_sponsorship_fund_unauthorized_caller_should_panic() {
     // Deploy NFT contract
-    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
     let unauthorized_caller: ContractAddress = contract_address_const::<'unauthorized_caller'>();
 
