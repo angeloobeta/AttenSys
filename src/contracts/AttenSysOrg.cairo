@@ -54,6 +54,8 @@ pub trait IAttenSysOrg<TContractState> {
         ref self: TContractState, organization: ContractAddress, uri: ByteArray, amt: u256
     );
     fn withdraw_sponsorship_fund(ref self: TContractState, amt: u256);
+    fn suspend_organization(ref self: TContractState, org_: ContractAddress, suspend: bool);
+    fn suspend_org_bootcamp(ref self: TContractState, org_: ContractAddress, bootcamp_id_: u64, suspend: bool);
     fn get_bootcamp_active_meet_link(
         self: @TContractState, org_: ContractAddress, bootcamp_id: u64
     ) -> ByteArray;
@@ -94,6 +96,9 @@ pub trait IAttenSysOrg<TContractState> {
     fn claim_admin_ownership(ref self: TContractState);
     fn get_admin(self: @TContractState) -> ContractAddress;
     fn get_new_admin(self: @TContractState) -> ContractAddress;
+    fn get_org_sponsorship_balance(self: @TContractState, organization: ContractAddress) -> u256;
+    fn is_bootcamp_suspended(self: @TContractState, org_: ContractAddress, bootcamp_id: u64) -> bool;
+    fn is_org_suspended(self: @TContractState, org_: ContractAddress) -> bool;
 }
 
 // Events
@@ -158,6 +163,10 @@ pub mod AttenSysOrg {
          intended_new_admin: ContractAddress,
         // map org to all requested registration
         org_to_requests: Map<ContractAddress, Vec<Student>>,
+        // map org => suspension status
+        org_suspended: Map::<ContractAddress, bool>,
+        // map org => bootcamp => suspension status
+        bootcamp_suspended: Map::<ContractAddress,Map::<u64, bool>>,
     }
 
     //find a way to keep track of all course identifiers for each owner.
@@ -175,7 +184,7 @@ pub mod AttenSysOrg {
 
     #[derive(Drop, Serde, starknet::Store)]
     pub struct Bootcamp {
-        pub bootcamp_id: u256,
+        pub bootcamp_id: u64,
         pub address_of_org: ContractAddress,
         pub org_name: ByteArray,
         pub bootcamp_name: ByteArray,
@@ -201,7 +210,7 @@ pub mod AttenSysOrg {
         pub instructor: ContractAddress,
         pub num_of_reg_students: u32,
         pub active_status: bool,
-        pub bootcamp_id: u256
+        pub bootcamp_id: u64
     }
 
     #[derive(Drop, Serde, starknet::Store)]
@@ -231,7 +240,9 @@ pub mod AttenSysOrg {
         StudentsCertified: StudentsCertified,
         SponsorshipAddressSet: SponsorshipAddressSet,
         OrganizationSponsored: OrganizationSponsored,
-        SponsorshipFundWithdrawn: SponsorshipFundWithdrawn
+        SponsorshipFundWithdrawn: SponsorshipFundWithdrawn,
+        OrganizationSuspended: OrganizationSuspended,
+        BootCampSuspended: BootCampSuspended,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -347,6 +358,20 @@ pub mod AttenSysOrg {
         pub withdrawal_amount: u256,
     }
 
+    #[derive(Drop, starknet::Event)]
+    pub struct OrganizationSuspended {
+        pub org_contract_address: ContractAddress,
+        pub org_name: ByteArray,
+        pub suspended : bool,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct BootCampSuspended {
+        pub org_contract_address: ContractAddress,
+        pub bootcamp_id: u64,
+        pub bootcamp_name: ByteArray,
+        pub suspended : bool,
+    }
 
     #[constructor]
     fn constructor(
@@ -423,6 +448,8 @@ pub mod AttenSysOrg {
             let status: bool = self.created_status.entry(caller).read();
             // confirm that the caller is associated an organization
             if status {
+                 //assert organization not suspended
+                assert(!self.org_suspended.entry(caller).read(), 'organization suspended');
                 for i in 0
                     ..instructor
                         .len() {
@@ -446,6 +473,9 @@ pub mod AttenSysOrg {
             let status: bool = self.created_status.entry(caller).read();
             // confirm that the caller is associated an organization
             if status {
+                 //assert organization not suspended
+                assert(!self.org_suspended.entry(caller).read(), 'organization suspended');
+
                 if self.instructor_part_of_org.entry((caller, instructor)).read() {
                     self.instructor_part_of_org.entry((caller, instructor)).write(false);
 
@@ -522,6 +552,7 @@ pub mod AttenSysOrg {
 
             // confirm that the caller is associated an organization
             if (status) {
+                assert(!self.bootcamp_suspended.entry(org_address).entry(bootcamp_id).read(), 'Bootcamp suspended');
                 if is_instructor {
                     self
                         .org_to_uploaded_videos_link
@@ -565,6 +596,8 @@ pub mod AttenSysOrg {
             let status: bool = self.created_status.entry(caller).read();
             // confirm that the caller is associated to an organization
             if (status) {
+                //assert organization not suspended
+                assert(!self.org_suspended.entry(caller).read(), 'organization suspended');
                 // constructor arguments
                 let mut constructor_args = array![];
                 nft_uri.serialize(ref constructor_args);
@@ -576,7 +609,7 @@ pub mod AttenSysOrg {
                     self.hash.read(), contract_address_salt, constructor_args.span(), false
                 )
                     .expect('failed to deploy_syscall');
-                let index: u256 = self.org_to_bootcamps.entry(caller).len().into();
+                let index: u64 = self.org_to_bootcamps.entry(caller).len().into();
                 // create bootcamp and update
                 let bootcamp_call_data: Bootcamp = Bootcamp {
                     bootcamp_id: index,
@@ -656,6 +689,7 @@ pub mod AttenSysOrg {
 
             // confirm that the caller is associated an organization
             if (status) {
+                assert(!self.bootcamp_suspended.entry(org_address).entry(bootcamp_id).read(), 'Bootcamp suspended');
                 if is_instructor {
                     let mut bootcamp: Bootcamp = self
                         .org_to_bootcamps
@@ -702,6 +736,7 @@ pub mod AttenSysOrg {
             let status: bool = self.created_status.entry(org_).read();
             // check org is created
             if status {
+                assert(!self.bootcamp_suspended.entry(org_).entry(bootcamp_id).read(), 'Bootcamp suspended');
                 let mut bootcamp = self.org_to_bootcamps.entry(org_);
                 for i in 0
                     ..bootcamp
@@ -907,8 +942,11 @@ pub mod AttenSysOrg {
             assert(!organization.is_zero(), 'not an instructor');
             assert(uri.len() > 0, 'uri is empty');
 
+            let sender = get_caller_address();
             let status: bool = self.created_status.entry(organization).read();
             if (status) {
+                 //assert organization not suspended
+                assert(!self.org_suspended.entry(organization).read(), 'organization suspended');
                 let balanceBefore = self.org_to_balance_of_sponsorship.entry(organization).read();
                 self.org_to_balance_of_sponsorship.entry(organization).write(balanceBefore + amt);
                 let sponsor_contract_address = self.sponsorship_contract_address.read();
@@ -916,7 +954,7 @@ pub mod AttenSysOrg {
                 let sponsor_dispatcher = IAttenSysSponsorDispatcher {
                     contract_address: sponsor_contract_address
                 };
-                sponsor_dispatcher.deposit(token_contract_address, amt);
+                sponsor_dispatcher.deposit(sender,token_contract_address, amt);
                 self.emit(Sponsor { amt, uri, organization });
             } else {
                 panic!("not an organization");
@@ -939,16 +977,48 @@ pub mod AttenSysOrg {
                 sponsor_dispatcher.withdraw(contract_address, amt);
 
                 let balanceBefore = self.org_to_balance_of_sponsorship.entry(organization).read();
-                self.org_to_balance_of_sponsorship.entry(organization).write(balanceBefore + amt);
+                self.org_to_balance_of_sponsorship.entry(organization).write(balanceBefore - amt);
                 let contract_address = self.token_address.read();
                 let sponsor_dispatcher = IAttenSysSponsorDispatcher { contract_address };
-                sponsor_dispatcher.deposit(self.token_address.read(), amt);
+                /// @maintainer What's the need for this deposit func, I'm guessing it's an error
+                // sponsor_dispatcher.deposit(organization, self.token_address.read(), amt);
                 self.emit(Withdrawn { amt, organization });
             } else {
                 panic!("not an organization");
             }
         }
 
+        fn suspend_organization(
+            ref self: ContractState, org_: ContractAddress, suspend: bool
+        ) {
+            only_admin(ref self);
+            let org: Organization = self.organization_info.entry(org_).read();
+            assert(!org.address_of_org.is_zero(), 'Organization not created');
+            if suspend {
+                assert(!self.org_suspended.entry(org_).read(), 'Organization suspended');
+                self.org_suspended.entry(org_).write(true);
+            } else {
+                assert(self.org_suspended.entry(org_).read(), 'Organization not suspended');
+                self.org_suspended.entry(org_).write(false);
+            }
+            self.emit(OrganizationSuspended { org_contract_address: org_, org_name: org.org_name, suspended: suspend });
+        }
+
+        fn suspend_org_bootcamp(
+            ref self: ContractState, org_: ContractAddress, bootcamp_id_: u64, suspend: bool
+        ) {
+            only_admin(ref self);
+            let bootcamp: Bootcamp = self.org_to_bootcamps.entry(org_).at(bootcamp_id_).read();
+            assert(!bootcamp.address_of_org.is_zero(), 'Invalid BootCamp');
+            if suspend {
+                assert(!self.bootcamp_suspended.entry(org_).entry(bootcamp_id_).read(), 'BootCamp suspended');
+                self.bootcamp_suspended.entry(org_).entry(bootcamp_id_).write(true);
+            } else {
+                assert(self.bootcamp_suspended.entry(org_).entry(bootcamp_id_).read(), 'BootCamp not suspended');
+                self.bootcamp_suspended.entry(org_).entry(bootcamp_id_).write(false);
+            }
+            self.emit(BootCampSuspended { org_contract_address: org_, bootcamp_id: bootcamp_id_, bootcamp_name: bootcamp.bootcamp_name, suspended: suspend });
+        } 
         // read functions
         fn get_all_org_bootcamps(self: @ContractState, org_: ContractAddress) -> Array<Bootcamp> {
             let mut arr_of_all_created_bootcamps = array![];
@@ -1159,6 +1229,13 @@ pub mod AttenSysOrg {
             let bootcamp: Bootcamp = self.org_to_bootcamps.entry(org_).at(bootcamp_id).read();
             bootcamp
         }
+
+
+        fn get_org_sponsorship_balance(
+            self: @ContractState, organization: ContractAddress
+        ) -> u256 {
+            self.org_to_balance_of_sponsorship.entry(organization).read()
+        }
         fn transfer_admin(ref self: ContractState, new_admin: ContractAddress) {
             assert(new_admin != self.zero_address(), 'zero address not allowed');
             assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
@@ -1180,13 +1257,27 @@ pub mod AttenSysOrg {
         fn get_new_admin(self: @ContractState) -> ContractAddress {
             self.intended_new_admin.read()
         }
+
+        fn is_org_suspended(
+            self: @ContractState, org_: ContractAddress
+        ) -> bool {
+            let is_suspended: bool = self.org_suspended.entry(org_).read();
+            is_suspended
+        }
+    
+        fn is_bootcamp_suspended(
+            self: @ContractState, org_: ContractAddress, bootcamp_id: u64
+        ) -> bool {
+            let is_suspended: bool = self.bootcamp_suspended.entry(org_).entry(bootcamp_id).read();
+            is_suspended
+        }
     }
 
     fn create_a_class(
         ref self: ContractState,
         org_: ContractAddress,
         num_of_class_to_create: u256,
-        bootcamp_id: u256
+        bootcamp_id: u64
     ) {
         let caller = get_caller_address();
         let status: bool = self.instructor_part_of_org.entry((org_, caller)).read();
@@ -1265,7 +1356,7 @@ pub mod AttenSysOrg {
 
     fn only_admin(ref self: ContractState) {
         let _caller = get_caller_address();
-        // assert(caller == self.admin.read(), 'Not admin');
+        assert(_caller == self.admin.read(), 'Not admin');
     }
     
     #[generate_trait]
