@@ -353,7 +353,7 @@ mod AttenSysEvent {
                         .write(nft_id + 1);
                     certified_attendees.append(attendee);
                 };
-                // Emit BatchCertificationCompleted event
+
                 self
                     .emit(
                         Event::BatchCertificationCompleted(
