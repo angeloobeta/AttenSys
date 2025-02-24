@@ -324,8 +324,10 @@ mod AttenSysEvent {
         }
 
         fn batch_certify_attendees(ref self: ContractState, event_identifier: u256) {
+            //only event owner
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
+            //update attendance_status here
             if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
                 let nft_contract_address = self
                     .event_nft_contract_address
@@ -353,7 +355,6 @@ mod AttenSysEvent {
                         .write(nft_id + 1);
                     certified_attendees.append(attendee);
                 };
-
                 self
                     .emit(
                         Event::BatchCertificationCompleted(
