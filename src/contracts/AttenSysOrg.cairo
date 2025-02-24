@@ -96,6 +96,7 @@ pub trait IAttenSysOrg<TContractState> {
     fn claim_admin_ownership(ref self: TContractState);
     fn get_admin(self: @TContractState) -> ContractAddress;
     fn get_new_admin(self: @TContractState) -> ContractAddress;
+    fn get_org_sponsorship_balance(self: @TContractState, organization: ContractAddress) -> u256;
     fn is_bootcamp_suspended(self: @TContractState, org_: ContractAddress, bootcamp_id: u64) -> bool;
     fn is_org_suspended(self: @TContractState, org_: ContractAddress) -> bool;
 }
@@ -941,6 +942,7 @@ pub mod AttenSysOrg {
             assert(!organization.is_zero(), 'not an instructor');
             assert(uri.len() > 0, 'uri is empty');
 
+            let sender = get_caller_address();
             let status: bool = self.created_status.entry(organization).read();
             if (status) {
                  //assert organization not suspended
@@ -952,7 +954,7 @@ pub mod AttenSysOrg {
                 let sponsor_dispatcher = IAttenSysSponsorDispatcher {
                     contract_address: sponsor_contract_address
                 };
-                sponsor_dispatcher.deposit(token_contract_address, amt);
+                sponsor_dispatcher.deposit(sender,token_contract_address, amt);
                 self.emit(Sponsor { amt, uri, organization });
             } else {
                 panic!("not an organization");
@@ -975,10 +977,11 @@ pub mod AttenSysOrg {
                 sponsor_dispatcher.withdraw(contract_address, amt);
 
                 let balanceBefore = self.org_to_balance_of_sponsorship.entry(organization).read();
-                self.org_to_balance_of_sponsorship.entry(organization).write(balanceBefore + amt);
+                self.org_to_balance_of_sponsorship.entry(organization).write(balanceBefore - amt);
                 let contract_address = self.token_address.read();
                 let sponsor_dispatcher = IAttenSysSponsorDispatcher { contract_address };
-                sponsor_dispatcher.deposit(self.token_address.read(), amt);
+                /// @maintainer What's the need for this deposit func, I'm guessing it's an error
+                // sponsor_dispatcher.deposit(organization, self.token_address.read(), amt);
                 self.emit(Withdrawn { amt, organization });
             } else {
                 panic!("not an organization");
@@ -1225,6 +1228,13 @@ pub mod AttenSysOrg {
         ) -> Bootcamp {
             let bootcamp: Bootcamp = self.org_to_bootcamps.entry(org_).at(bootcamp_id).read();
             bootcamp
+        }
+
+
+        fn get_org_sponsorship_balance(
+            self: @ContractState, organization: ContractAddress
+        ) -> u256 {
+            self.org_to_balance_of_sponsorship.entry(organization).read()
         }
         fn transfer_admin(ref self: ContractState, new_admin: ContractAddress) {
             assert(new_admin != self.zero_address(), 'zero address not allowed');

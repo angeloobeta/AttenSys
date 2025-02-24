@@ -510,7 +510,7 @@ mod AttenSysEvent {
             let sponsor_dispatcher = IAttenSysSponsorDispatcher {
                 contract_address: sponsor_contract_address,
             };
-            sponsor_dispatcher.deposit(token_address, amt);
+            sponsor_dispatcher.deposit(get_caller_address(), token_address, amt);
             self.event_to_balance_of_sponsorship.entry(event).write(balance + amt);
 
             // verify if sponsor doesn't already exist
