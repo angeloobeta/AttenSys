@@ -253,6 +253,7 @@ mod AttenSysEvent {
 
         fn end_event(ref self: ContractState, event_identifier: u256) {
             //only event owner
+            assert(self.get_event_suspended_status(event_identifier) == false, 'event is suspended');
             self.end_event_(event_identifier);
         }
 
@@ -260,6 +261,7 @@ mod AttenSysEvent {
             //only event owner
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
+            assert(event_details.is_suspended == false, 'event is suspended');
             //update attendance_status here
             if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
                 let nft_contract_address = self
@@ -311,6 +313,7 @@ mod AttenSysEvent {
 
         fn mark_attendance(ref self: ContractState, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             assert(
                 self.registered.entry((get_caller_address(), event_identifier)).read() == true,
                 'not registered',
@@ -351,6 +354,7 @@ mod AttenSysEvent {
 
         fn register_for_event(ref self: ContractState, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             //can only register once
             assert(
                 self.registered.entry((get_caller_address(), event_identifier)).read() == false,
@@ -441,6 +445,7 @@ mod AttenSysEvent {
 
         fn start_end_reg(ref self: ContractState, reg_stat: bool, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             //only event owner
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
             self
