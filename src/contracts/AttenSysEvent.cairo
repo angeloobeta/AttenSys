@@ -299,7 +299,8 @@ mod AttenSysEvent {
                         event_organizer: owner_,
                         registered_attendants: 0,
                         event_uri: event_uri.clone(),
-                        is_suspended: false,
+                        is_suspended: false
+                    }
 
                 );
             self.event_identifier.write(new_identifier);
