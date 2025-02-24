@@ -129,6 +129,7 @@ mod AttenSysEvent {
         pub event_organizer: ContractAddress,
         pub registered_attendants: u256,
         pub event_uri: ByteArray,
+        pub is_suspended: bool,
     }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -266,6 +267,7 @@ mod AttenSysEvent {
                 event_organizer: owner_,
                 registered_attendants: 0,
                 event_uri: event_uri.clone(),
+                is_suspended: false
             };
 
             // constructor arguments
@@ -295,6 +297,7 @@ mod AttenSysEvent {
                         event_organizer: owner_,
                         registered_attendants: 0,
                         event_uri: event_uri.clone(),
+                        is_suspended: false
                     },
                 );
             self.event_identifier.write(new_identifier);
