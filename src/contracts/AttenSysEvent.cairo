@@ -48,6 +48,8 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn sponsor_event(ref self: TContractState, event: ContractAddress, amt: u256, uri: ByteArray);
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
+    fn toggle_event_suspended_status(ref self: TContractState, event_identifier: u256, status: bool);
+    fn get_event_suspended_status(self: @TContractState, event_identifier: u256) -> bool;
 }
 
 #[starknet::interface]
@@ -267,7 +269,7 @@ mod AttenSysEvent {
                 event_organizer: owner_,
                 registered_attendants: 0,
                 event_uri: event_uri.clone(),
-                is_suspended: false
+                is_suspended: false,
             };
 
             // constructor arguments
@@ -297,8 +299,8 @@ mod AttenSysEvent {
                         event_organizer: owner_,
                         registered_attendants: 0,
                         event_uri: event_uri.clone(),
-                        is_suspended: false
-                    },
+                        is_suspended: false,
+
                 );
             self.event_identifier.write(new_identifier);
             self.track_minted_nft_id.entry((new_identifier, deployed_contract_address)).write(1);
@@ -321,6 +323,7 @@ mod AttenSysEvent {
 
         fn end_event(ref self: ContractState, event_identifier: u256) {
             //only event owner
+            assert(self.get_event_suspended_status(event_identifier) == false, 'event is suspended');
             self.end_event_(event_identifier);
 
             self.emit(Event::EventEnded(EventEnded { event_identifier: event_identifier }));
@@ -330,6 +333,7 @@ mod AttenSysEvent {
             //only event owner
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
+            assert(event_details.is_suspended == false, 'event is suspended');
             //update attendance_status here
             if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
                 let nft_contract_address = self
@@ -372,6 +376,7 @@ mod AttenSysEvent {
 
         fn mark_attendance(ref self: ContractState, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             assert(
                 self.registered.entry((get_caller_address(), event_identifier)).read() == true,
                 'not registered',
@@ -418,6 +423,7 @@ mod AttenSysEvent {
 
         fn register_for_event(ref self: ContractState, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             //can only register once
             assert(
                 self.registered.entry((get_caller_address(), event_identifier)).read() == false,
@@ -514,6 +520,7 @@ mod AttenSysEvent {
 
         fn start_end_reg(ref self: ContractState, reg_stat: bool, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             //only event owner
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
             self
@@ -649,6 +656,19 @@ mod AttenSysEvent {
 
             self.emit(Withdrawn { amt, event });
         }
+
+        fn toggle_event_suspended_status(ref self: ContractState, event_identifier: u256, status: bool) {
+            self.only_admin();
+            self
+                .specific_event_with_identifier
+                .entry(event_identifier)
+                .is_suspended
+                .write(status);
+        }
+
+        fn get_event_suspended_status(self: @ContractState, event_identifier: u256) -> bool {
+            self.specific_event_with_identifier.entry(event_identifier).read().is_suspended
+        }
     }
 
     #[generate_trait]
@@ -677,6 +697,10 @@ mod AttenSysEvent {
 
         fn zero_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<0>()
+        }
+
+        fn only_admin(self: @ContractState) {
+            assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
         }
     }
 }
