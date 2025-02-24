@@ -44,7 +44,7 @@ pub trait IAttenSysCourse<TContractState> {
     fn get_total_course_completions(self: @TContractState, course_identifier: u256) -> u256;
     fn ensure_admin(self: @TContractState);
     fn get_suspension_status(self: @TContractState, course_identifier: u256) -> bool;
-    fn toggle_suspension(ref self: TContractState, course_identifier: u256);
+    fn toggle_suspension(ref self: TContractState, course_identifier: u256,suspend: bool);
     
 }
 
@@ -499,7 +499,7 @@ pub mod AttenSysCourse {
             self.specific_course_info_with_identifer.entry(course_identifier).is_suspended.read()
         }
        
-        fn toggle_suspension(ref self: ContractState, course_identifier: u256){
+        fn toggle_suspension(ref self: ContractState, course_identifier: u256, suspend: bool){
             self.ensure_admin();
 
             let course = self
@@ -507,21 +507,20 @@ pub mod AttenSysCourse {
                              .entry(course_identifier)
                              .read();
 
-            let current_status = course.is_suspended;                    
-            
-            let new_status = !current_status;
-        
-            self
-                .specific_course_info_with_identifer
-                .entry(course_identifier)
-                .is_suspended
-                .write(new_status);
-        
-            if new_status {
-                self.emit(CourseSuspended { course_identifier });
-            } else {
-                self.emit(CourseUnsuspended { course_identifier });
-            }
+            if course.is_suspended != suspend {
+                self
+                     .specific_course_info_with_identifer
+                     .entry(course_identifier)
+                     .is_suspended
+                     .write(suspend);
+
+                if suspend {
+                    self.emit(CourseSuspended { course_identifier });
+                    } else {
+                        self.emit(CourseUnsuspended { course_identifier });
+                    }
+                }
+
         }
       
              

@@ -221,7 +221,8 @@ fn test_non_admin_cannot_suspend_or_unsuspend_course() {
 
     // Non-admin tries to suspend
     start_cheat_caller_address(contract_address, non_admin);
-    attensys_course_contract.toggle_suspension(course_id); // Should fail
+    
+    attensys_course_contract.toggle_suspension(course_id, true); // Should fail
     
 }
 
@@ -245,7 +246,7 @@ fn test_toggle_suspension() {
     
     //newly created course.is_suspended should be false
     assert(attensys_course_contract.get_suspension_status(course_identifier) == false, 'course is suspended');
-    attensys_course_contract.toggle_suspension(course_identifier);
+    attensys_course_contract.toggle_suspension(course_identifier, true);
     //course.is_suspended should be true after toggle
     assert(attensys_course_contract.get_suspension_status(course_identifier) == true, 'course is not suspended');
 
