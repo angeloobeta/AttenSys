@@ -664,7 +664,7 @@ mod AttenSysEvent {
         fn set_sponsorship_contract(
             ref self: ContractState, sponsor_contract_address: ContractAddress
         ) {
-            only_admin(ref self);
+            self.only_admin();
             assert(!sponsor_contract_address.is_zero(), 'Null address not allowed');
             self.sponsorship_contract_address.write(sponsor_contract_address);
             // self.emit(SponsorshipAddressSet { sponsor_contract_address });
@@ -675,11 +675,6 @@ mod AttenSysEvent {
         ) -> u256 {
             self.event_to_balance_of_sponsorship.entry(event).read()
         }
-    }
-
-       fn only_admin(ref self: ContractState) {
-          let _caller = get_caller_address();
-          assert(_caller == self.admin.read(), 'Not admin');
 
         fn toggle_event_suspended_status(ref self: ContractState, event_identifier: u256, status: bool) {
             self.only_admin();
@@ -693,8 +688,8 @@ mod AttenSysEvent {
         fn get_event_suspended_status(self: @ContractState, event_identifier: u256) -> bool {
             self.specific_event_with_identifier.entry(event_identifier).read().is_suspended
         }
-
     }
+
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
