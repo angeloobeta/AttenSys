@@ -45,6 +45,7 @@ pub trait IAttenSysOrg<TContractState> {
         org_: ContractAddress,
         instructor_: ContractAddress,
         class_id: u64,
+        bootcamp_id: u64,
     );
     fn batch_certify_students(
         ref self: TContractState,
@@ -106,6 +107,10 @@ pub trait IAttenSysOrg<TContractState> {
         self: @TContractState, org_: ContractAddress, bootcamp_id: u64,
     ) -> bool;
     fn is_org_suspended(self: @TContractState, org_: ContractAddress) -> bool;
+    fn get_registered_bootcamp(self: @TContractState, student: ContractAddress) -> Array<AttenSysOrg::RegisteredBootcamp>;
+    fn get_specific_organization_registered_bootcamp(self: @TContractState, org: ContractAddress, student: ContractAddress) -> Array<AttenSysOrg::RegisteredBootcamp>;
+    fn get_class_attendance_status(self: @TContractState,org: ContractAddress, bootcamp_id : u64, class_id: u64,student: ContractAddress)-> bool;
+    fn get_all_bootcamp_classes (self: @TContractState, org: ContractAddress, bootcamp_id : u64) -> Array<u64>;
 }
 
 // Events
@@ -156,7 +161,7 @@ pub mod AttenSysOrg {
         // update and retrieve students info
         student_info: Map::<ContractAddress, Student>,
         //saves attendance status of students
-        student_attendance_status: Map::<(ContractAddress, u64), bool>,
+        student_attendance_status: Map::<(ContractAddress,u64, u64, ContractAddress), bool>,
         //saves attendance status of students
         inst_student_status: Map<ContractAddress, Map<ContractAddress, bool>>,
         //cerified course, student ---> true
@@ -177,6 +182,12 @@ pub mod AttenSysOrg {
         org_suspended: Map::<ContractAddress, bool>,
         // map org => bootcamp => suspension status
         bootcamp_suspended: Map::<ContractAddress, Map<u64, bool>>,
+        //maps student address to vec of bootcamps
+        student_address_to_bootcamps: Map::<ContractAddress, Vec<RegisteredBootcamp>>,
+        //maps student address to org address to specific bootcamp
+        student_address_to_specific_bootcamp: Map::<(ContractAddress, ContractAddress), Vec<RegisteredBootcamp>>,
+        //maps org to bootcamp to classID
+        bootcamp_class_data_id : Map::<(ContractAddress, u64), Vec<u64>>,
     }
 
     //find a way to keep track of all course identifiers for each owner.
@@ -220,6 +231,25 @@ pub mod AttenSysOrg {
         pub instructor: ContractAddress,
         pub num_of_reg_students: u32,
         pub active_status: bool,
+        pub bootcamp_id: u64,
+    }
+
+    #[derive(Drop, Copy, Serde, starknet::Store)]
+    pub struct Bootcampclass {
+        pub address_of_org: ContractAddress,
+        pub bootcamp_id: u64,
+        pub attendance : bool,
+        pub student_address: ContractAddress,
+        pub class_id : u64,
+    }
+
+
+    
+    #[derive(Drop, Copy, Serde, starknet::Store)]
+    pub struct RegisteredBootcamp {
+        pub address_of_org: ContractAddress,
+        pub student: ContractAddress,
+        pub acceptance_status: bool,
         pub bootcamp_id: u64,
     }
 
@@ -813,6 +843,22 @@ pub mod AttenSysOrg {
 
                         the_bootcamp.number_of_students = the_bootcamp.number_of_students + 1;
                         self.org_to_bootcamps.entry(caller).at(bootcamp_id).write(the_bootcamp);
+                        self.student_address_to_specific_bootcamp.entry((caller,student_address)).append().write(
+                            RegisteredBootcamp{
+                                address_of_org : caller,
+                                student : student_address.clone(),
+                                acceptance_status : true,
+                                bootcamp_id : bootcamp_id,
+                            },
+                        );
+                        self.student_address_to_bootcamps.entry(student_address).append().write(
+                            RegisteredBootcamp{
+                                address_of_org : caller,
+                                student : student_address,
+                                acceptance_status : true,
+                                bootcamp_id : bootcamp_id,
+                            },
+                        );
                     }
                     // update organization and instructor data
                     let mut org = self.organization_info.entry(caller).read();
@@ -872,17 +918,20 @@ pub mod AttenSysOrg {
             org_: ContractAddress,
             instructor_: ContractAddress,
             class_id: u64,
+            bootcamp_id: u64,
         ) {
             let caller = get_caller_address();
+            let class_id_len = self.bootcamp_class_data_id.entry((org_, bootcamp_id)).len();
+            assert(class_id < class_id_len && class_id >= 0, 'invalid class id');
             let mut instructor_class = self
                 .org_instructor_classes
                 .entry((org_, instructor_))
                 .at(class_id)
                 .read();
-            let reg_status = self.student_attendance_status.entry((caller, class_id)).read();
+            let reg_status = self.student_attendance_status.entry((caller, bootcamp_id, class_id, caller)).read();
             assert(instructor_class.active_status, 'not a class');
-            assert(!reg_status, 'not registered student');
-            self.student_attendance_status.entry((caller, class_id)).write(true);
+            assert(!reg_status, 'attendance marked');
+            self.student_attendance_status.entry((org_, bootcamp_id, class_id,caller)).write(true);
             self
                 .emit(
                     AttendanceMarked {
@@ -974,8 +1023,8 @@ pub mod AttenSysOrg {
 
                 let balanceBefore = self.org_to_balance_of_sponsorship.entry(organization).read();
                 self.org_to_balance_of_sponsorship.entry(organization).write(balanceBefore - amt);
-                let contract_address = self.token_address.read();
-                let sponsor_dispatcher = IAttenSysSponsorDispatcher { contract_address };
+                // let contract_address = self.token_address.read();
+                // let sponsor_dispatcher = IAttenSysSponsorDispatcher { contract_address };
                 /// @maintainer What's the need for this deposit func, I'm guessing it's an error
                 // sponsor_dispatcher.deposit(organization, self.token_address.read(), amt);
                 self.emit(Withdrawn { amt, organization });
@@ -1235,6 +1284,42 @@ pub mod AttenSysOrg {
             let is_suspended: bool = self.bootcamp_suspended.entry(org_).entry(bootcamp_id).read();
             is_suspended
         }
+        
+        fn get_registered_bootcamp(self: @ContractState, student: ContractAddress) -> Array<RegisteredBootcamp>{
+            let mut array_of_reg_bootcamp = array![];
+            for i in 0..self.student_address_to_bootcamps.entry(student).len() {
+                array_of_reg_bootcamp.append(self.student_address_to_bootcamps.entry(student).at(i).read());
+            };
+            array_of_reg_bootcamp
+        }
+        fn get_specific_organization_registered_bootcamp(self: @ContractState, org: ContractAddress, student: ContractAddress)-> Array<RegisteredBootcamp> {
+            let mut array_of_specific_org_reg_bootcamp = array![];
+            for i in 0..self.student_address_to_specific_bootcamp.entry((org,student)).len() {
+                array_of_specific_org_reg_bootcamp.append(self.student_address_to_specific_bootcamp.entry((org,student)).at(i).read());
+            };
+            array_of_specific_org_reg_bootcamp
+        }
+        fn get_class_attendance_status(self: @ContractState, org: ContractAddress, bootcamp_id : u64, class_id: u64, student: ContractAddress)-> bool {
+            let mut instructor_class = self
+            .org_instructor_classes
+            .entry((org, org))
+            .at(class_id)
+            .read();
+            assert(instructor_class.active_status, 'not a class');
+            let class_id_len = self.bootcamp_class_data_id.entry((org, bootcamp_id)).len();
+            assert(class_id < class_id_len && class_id >= 0, 'invalid class id');
+
+            let reg_status = self.student_attendance_status.entry((org, bootcamp_id, class_id, student)).read();
+                reg_status
+        }
+
+        fn get_all_bootcamp_classes (self: @ContractState, org: ContractAddress, bootcamp_id : u64) -> Array<u64>{
+            let mut arr = array![];
+            for i in 0..self.bootcamp_class_data_id.entry((org,bootcamp_id)).len() {
+                arr.append(self.bootcamp_class_data_id.entry((org,bootcamp_id)).at(i).read());
+            };
+            arr
+        }
     }
 
     fn create_a_class(
@@ -1260,6 +1345,11 @@ pub mod AttenSysOrg {
             let mut org: Organization = self.organization_info.entry(org_).read();
             org.number_of_all_classes += num_of_class_to_create;
             self.organization_info.entry(org_).write(org);
+            
+            for i in 0..num_of_class_to_create {
+                self.bootcamp_class_data_id.entry((org_, bootcamp_id)).append().write(i.try_into().unwrap())
+            }
+
         } else {
             panic!("not an instructor in this org");
         }
