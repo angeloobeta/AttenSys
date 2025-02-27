@@ -50,6 +50,8 @@ pub trait IAttenSysEvent<TContractState> {
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
     fn set_sponsorship_contract(ref self: TContractState, sponsor_contract_address: ContractAddress);
     fn get_event_sponsorship_balance(self: @TContractState, event: ContractAddress) -> u256;
+    fn toggle_event_suspended_status(ref self: TContractState, event_identifier: u256, status: bool);
+    fn get_event_suspended_status(self: @TContractState, event_identifier: u256) -> bool;
 }
 
 #[starknet::interface]
@@ -131,6 +133,7 @@ mod AttenSysEvent {
         pub event_organizer: ContractAddress,
         pub registered_attendants: u256,
         pub event_uri: ByteArray,
+        pub is_suspended: bool,
     }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -151,6 +154,14 @@ mod AttenSysEvent {
     pub enum Event {
         Sponsor: Sponsor,
         Withdrawn: Withdrawn,
+        EventCreated: EventCreated,
+        EventEnded: EventEnded,
+        AttendanceMarked: AttendanceMarked,
+        RegisteredForEvent: RegisteredForEvent,
+        RegistrationStatusChanged: RegistrationStatusChanged,
+        AdminTransferred: AdminTransferred,
+        AdminOwnershipClaimed: AdminOwnershipClaimed,
+        BatchCertificationCompleted: BatchCertificationCompleted,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -166,6 +177,55 @@ mod AttenSysEvent {
         pub amt: u256,
         #[key]
         pub event: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct EventCreated {
+        pub event_identifier: u256,
+        pub event_name: ByteArray,
+        pub event_organizer: ContractAddress,
+        pub event_uri: ByteArray,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct EventEnded {
+        pub event_identifier: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct AttendanceMarked {
+        pub event_identifier: u256,
+        pub attendee: ContractAddress,
+    }
+
+
+    #[derive(Drop, starknet::Event)]
+    pub struct RegisteredForEvent {
+        pub event_identifier: u256,
+        pub attendee: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct RegistrationStatusChanged {
+        pub event_identifier: u256,
+        pub registration_open: bool,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct AdminTransferred {
+        pub old_admin: ContractAddress,
+        pub new_admin: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct AdminOwnershipClaimed {
+        pub new_admin: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct BatchCertificationCompleted {
+        pub event_identifier: u256,
+        pub certified_attendees: Array<ContractAddress>,
     }
 
     #[constructor]
@@ -211,6 +271,7 @@ mod AttenSysEvent {
                 event_organizer: owner_,
                 registered_attendants: 0,
                 event_uri: event_uri.clone(),
+                is_suspended: false,
             };
 
             // constructor arguments
@@ -233,81 +294,92 @@ mod AttenSysEvent {
                 .entry(new_identifier)
                 .write(
                     EventStruct {
-                        event_name: event_name,
+                        event_name: event_name.clone(),
                         time: time_data,
                         active_status: true,
                         signature_count: 0,
                         event_organizer: owner_,
                         registered_attendants: 0,
-                        event_uri: event_uri,
-                    },
+                        event_uri: event_uri.clone(),
+                        is_suspended: false
+                    }
+
                 );
             self.event_identifier.write(new_identifier);
             self.track_minted_nft_id.entry((new_identifier, deployed_contract_address)).write(1);
             self.event_exists.entry(owner_).write(true);
+
+            self
+                .emit(
+                    Event::EventCreated(
+                        EventCreated {
+                            event_identifier: new_identifier,
+                            event_name: event_name,
+                            event_organizer: owner_,
+                            event_uri: event_uri,
+                        },
+                    ),
+                );
+
             deployed_contract_address
         }
 
         fn end_event(ref self: ContractState, event_identifier: u256) {
             //only event owner
+            assert(self.get_event_suspended_status(event_identifier) == false, 'event is suspended');
             self.end_event_(event_identifier);
+
+            self.emit(Event::EventEnded(EventEnded { event_identifier: event_identifier }));
         }
 
         fn batch_certify_attendees(ref self: ContractState, event_identifier: u256) {
             //only event owner
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
+            assert(event_details.is_suspended == false, 'event is suspended');
             //update attendance_status here
             if self.all_attendance_marked_for_event.entry(event_identifier).len() > 0 {
                 let nft_contract_address = self
                     .event_nft_contract_address
                     .entry(event_identifier)
                     .read();
-                for i in 0
-                    ..self
+                let mut certified_attendees = array![];
+                for i in 0..self.all_attendance_marked_for_event.entry(event_identifier).len() {
+                    let attendee = self
                         .all_attendance_marked_for_event
                         .entry(event_identifier)
-                        .len() {
-                            self
-                                .attendance_status
-                                .entry(
-                                    (
-                                        self
-                                            .all_attendance_marked_for_event
-                                            .entry(event_identifier)
-                                            .at(i)
-                                            .read(),
-                                        event_identifier,
-                                    ),
-                                )
-                                .write(true);
-                            let nft_dispatcher = super::IAttenSysNftDispatcher {
-                                contract_address: nft_contract_address,
-                            };
-
-                            let nft_id = self
-                                .track_minted_nft_id
-                                .entry((event_identifier, nft_contract_address))
-                                .read();
-                            nft_dispatcher
-                                .mint(
-                                    self
-                                        .all_attendance_marked_for_event
-                                        .entry(event_identifier)
-                                        .at(i)
-                                        .read(),
-                                    nft_id,
-                                );
-                            self
-                                .track_minted_nft_id
-                                .entry((event_identifier, nft_contract_address))
-                                .write(nft_id + 1);
-                        }
+                        .at(i)
+                        .read();
+                    self.attendance_status.entry((attendee, event_identifier)).write(true);
+                    let nft_id = self
+                        .track_minted_nft_id
+                        .entry((event_identifier, nft_contract_address))
+                        .read();
+                    let nft_dispatcher = super::IAttenSysNftDispatcher {
+                        contract_address: nft_contract_address,
+                    };
+                    nft_dispatcher.mint(attendee, nft_id);
+                    self
+                        .track_minted_nft_id
+                        .entry((event_identifier, nft_contract_address))
+                        .write(nft_id + 1);
+                    certified_attendees.append(attendee);
+                };
+                self
+                    .emit(
+                        Event::BatchCertificationCompleted(
+                            BatchCertificationCompleted {
+                                event_identifier: event_identifier,
+                                certified_attendees: certified_attendees,
+                            },
+                        ),
+                    );
             }
         }
 
         fn mark_attendance(ref self: ContractState, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             assert(
                 self.registered.entry((get_caller_address(), event_identifier)).read() == true,
                 'not registered',
@@ -326,14 +398,11 @@ mod AttenSysEvent {
                 .write(count + 1);
 
             if self.all_event.len() > 0 {
-                for i in 0
-                    ..self
-                        .all_event
-                        .len() {
-                            if self.all_event.at(i).read().event_name == event_details.event_name {
-                                self.all_event.at(i).signature_count.write(count + 1);
-                            }
-                        }
+                for i in 0..self.all_event.len() {
+                    if self.all_event.at(i).read().event_name == event_details.event_name {
+                        self.all_event.at(i).signature_count.write(count + 1);
+                    }
+                }
             }
             self
                 .all_attendance_marked_for_event
@@ -344,10 +413,20 @@ mod AttenSysEvent {
                 event_name: event_details.event_name, time: event_details.time.start_time,
             };
             self.all_attended_event.entry(get_caller_address()).append().write(call_data);
+
+            self
+                .emit(
+                    Event::AttendanceMarked(
+                        AttendanceMarked {
+                            event_identifier: event_identifier, attendee: get_caller_address(),
+                        },
+                    ),
+                );
         }
 
         fn register_for_event(ref self: ContractState, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             //can only register once
             assert(
                 self.registered.entry((get_caller_address(), event_identifier)).read() == false,
@@ -368,19 +447,25 @@ mod AttenSysEvent {
                 .write(count + 1);
 
             if self.all_event.len() > 0 {
-                for i in 0
-                    ..self
-                        .all_event
-                        .len() {
-                            if self.all_event.at(i).read().event_name == event_details.event_name {
-                                self.all_event.at(i).registered_attendants.write(count + 1);
-                            }
-                        }
+                for i in 0..self.all_event.len() {
+                    if self.all_event.at(i).read().event_name == event_details.event_name {
+                        self.all_event.at(i).registered_attendants.write(count + 1);
+                    }
+                }
             }
             let call_data = UserAttendedEventStruct {
                 event_name: event_details.event_name, time: event_details.time.start_time,
             };
             self.all_registered_event_by_user.entry(get_caller_address()).append().write(call_data);
+
+            self
+                .emit(
+                    Event::RegisteredForEvent(
+                        RegisteredForEvent {
+                            event_identifier: event_identifier, attendee: get_caller_address(),
+                        },
+                    ),
+                );
         }
 
         //@todo fn get_registered_users(ref self: ContractState, event_identifier : u256, passcode :
@@ -438,6 +523,7 @@ mod AttenSysEvent {
 
         fn start_end_reg(ref self: ContractState, reg_stat: bool, event_identifier: u256) {
             let event_details = self.specific_event_with_identifier.entry(event_identifier).read();
+            assert(event_details.is_suspended == false, 'event is suspended');
             //only event owner
             assert(event_details.event_organizer == get_caller_address(), 'not authorized');
             self
@@ -448,15 +534,20 @@ mod AttenSysEvent {
                 .write(reg_stat);
             //loop through the all_event vec and end the specific event
             if self.all_event.len() > 0 {
-                for i in 0
-                    ..self
-                        .all_event
-                        .len() {
-                            if self.all_event.at(i).read().event_name == event_details.event_name {
-                                self.all_event.at(i).time.registration_open.write(reg_stat);
-                            }
-                        }
+                for i in 0..self.all_event.len() {
+                    if self.all_event.at(i).read().event_name == event_details.event_name {
+                        self.all_event.at(i).time.registration_open.write(reg_stat);
+                    }
+                }
             }
+            self
+                .emit(
+                    Event::RegistrationStatusChanged(
+                        RegistrationStatusChanged {
+                            event_identifier: event_identifier, registration_open: reg_stat,
+                        },
+                    ),
+                );
         }
 
         fn get_event_details(self: @ContractState, event_identifier: u256) -> EventStruct {
@@ -479,14 +570,28 @@ mod AttenSysEvent {
             assert(new_admin != self.zero_address(), 'zero address not allowed');
             assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
 
+            let old_admin = self.admin.read();
             self.intended_new_admin.write(new_admin);
+
+            self.intended_new_admin.write(new_admin);
+
+            self
+                .emit(
+                    Event::AdminTransferred(
+                        AdminTransferred { old_admin: old_admin, new_admin: new_admin },
+                    ),
+                );
         }
 
         fn claim_admin_ownership(ref self: ContractState) {
             assert(get_caller_address() == self.intended_new_admin.read(), 'unauthorized caller');
 
+            let new_admin = self.intended_new_admin.read();
+
             self.admin.write(self.intended_new_admin.read());
             self.intended_new_admin.write(self.zero_address());
+
+            self.emit(Event::AdminOwnershipClaimed(AdminOwnershipClaimed { new_admin: new_admin }));
         }
 
         fn get_admin(self: @ContractState) -> ContractAddress {
@@ -518,14 +623,12 @@ mod AttenSysEvent {
             // verify if sponsor doesn't already exist
             let mut existing_sponsors = self.event_to_list_of_sponsors.entry(event);
             let mut sponsor_exists = false;
-            for i in 0
-                ..existing_sponsors
-                    .len() {
-                        if sponsor == existing_sponsors.at(i).read() {
-                            sponsor_exists = true;
-                            break;
-                        }
-                    };
+            for i in 0..existing_sponsors.len() {
+                if sponsor == existing_sponsors.at(i).read() {
+                    sponsor_exists = true;
+                    break;
+                }
+            };
 
             if !sponsor_exists {
                 existing_sponsors.append().write(sponsor);
@@ -574,9 +677,23 @@ mod AttenSysEvent {
         }
     }
 
-    fn only_admin(ref self: ContractState) {
-        let _caller = get_caller_address();
-        assert(_caller == self.admin.read(), 'Not admin');
+       fn only_admin(ref self: ContractState) {
+          let _caller = get_caller_address();
+          assert(_caller == self.admin.read(), 'Not admin');
+
+        fn toggle_event_suspended_status(ref self: ContractState, event_identifier: u256, status: bool) {
+            self.only_admin();
+            self
+                .specific_event_with_identifier
+                .entry(event_identifier)
+                .is_suspended
+                .write(status);
+        }
+
+        fn get_event_suspended_status(self: @ContractState, event_identifier: u256) -> bool {
+            self.specific_event_with_identifier.entry(event_identifier).read().is_suspended
+        }
+
     }
 
     #[generate_trait]
@@ -594,20 +711,21 @@ mod AttenSysEvent {
             self.specific_event_with_identifier.entry(event_identifier).active_status.write(false);
             //loop through the all_event vec and end the specific event
             if self.all_event.len() > 0 {
-                for i in 0
-                    ..self
-                        .all_event
-                        .len() {
-                            if self.all_event.at(i).read().event_name == event_details.event_name {
-                                self.all_event.at(i).time.write(time_data);
-                                self.all_event.at(i).active_status.write(false);
-                            }
-                        }
+                for i in 0..self.all_event.len() {
+                    if self.all_event.at(i).read().event_name == event_details.event_name {
+                        self.all_event.at(i).time.write(time_data);
+                        self.all_event.at(i).active_status.write(false);
+                    }
+                }
             }
         }
 
         fn zero_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<0>()
+        }
+
+        fn only_admin(self: @ContractState) {
+            assert(get_caller_address() == self.admin.read(), 'unauthorized caller');
         }
     }
 }
