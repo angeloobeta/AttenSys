@@ -17,19 +17,6 @@ use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatch
 
 
 // Helper function to deploy contracts
-fn deploy_contract(name: ByteArray, hash: ClassHash) -> ContractAddress {
-    let contract = declare(name).unwrap();
-    let mut constuctor_arg = ArrayTrait::new();
-    let contract_owner_address: ContractAddress = contract_address_const::<'admin'>();
-
-    contract_owner_address.serialize(ref constuctor_arg);
-    hash.serialize(ref constuctor_arg);
-
-    let (contract_address, _) = contract.deploy(@constuctor_arg).unwrap();
-
-    contract_address
-}
-
 fn deploy_nft_contract(name: ByteArray) -> (ContractAddress, ClassHash) {
     let token_uri: ByteArray = "https://dummy_uri.com/your_id";
     let name_: ByteArray = "Attensys";
@@ -71,17 +58,17 @@ fn deploy_event_contract(
 
 #[test]
 fn test_sponsor_event_flow() {
-    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let owner_address: ContractAddress = contract_address_const::<'admin'>();
     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
 
     let sponsor_amount: u256 = 1000_u256;
     let sponsor_uri: ByteArray = "ipfs://event-sponsor";
 
     // deploy the token
-    let initial_supply: u256 = 1_000_000_u256;
+    // let initial_supply: u256 = 1_000_000_u256;
     let token_contract_class = declare("AttenSysToken").unwrap();
-    let mut constructor_args = ArrayTrait::new();
-    initial_supply.serialize(ref constructor_args);
+    let mut constructor_args: Array<felt252> = ArrayTrait::new();
+    // initial_supply.serialize(ref constructor_args);
     sponsor_address.serialize(ref constructor_args);
     let (token_contract_address, _) = token_contract_class.deploy(@constructor_args).unwrap();
 
@@ -94,10 +81,10 @@ fn test_sponsor_event_flow() {
         "AttenSysEvent", hash, token_contract_address, temp_sponsor_contract_address
     );
 
-    //deploy the sponsor contract
+    // //deploy the sponsor contract
     let org_contract_address = contract_address_const::<'org_contract_address'>();
     let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
-    let mut constructor_args = ArrayTrait::new();
+    let mut constructor_args: Array<felt252> = ArrayTrait::new();
     org_contract_address.serialize(ref constructor_args);
     event_contract_address.serialize(ref constructor_args);
     let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
@@ -108,8 +95,8 @@ fn test_sponsor_event_flow() {
     let event_ipfs_uri: ByteArray = "event-uri";
     let event_owner_address: ContractAddress = contract_address_const::<'event_owner'>();
     let token_uri: ByteArray = "https://dummy_uri.com/your_id";
-    let nft_name = "ODBuild";
-    let nft_symb = "ODB";
+    let nft_name: ByteArray = "ODBuild";
+    let nft_symb: ByteArray = "ODB";
 
     start_cheat_caller_address(event_contract_address, owner_address);
     event_dispatcher.set_sponsorship_contract(sponsor_contract_address);
@@ -136,6 +123,12 @@ fn test_sponsor_event_flow() {
     // Sponsor the created event
     let created_event = event_dispatcher.get_event_details(1);
     let created_event_address: ContractAddress = created_event.event_organizer;
+
+    // Confirm event sponsorship balance is initially empty
+    let initial_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    assert(initial_event_balance == 0, 'Wrong event balance');
+
+
     start_cheat_caller_address(event_contract_address, sponsor_address);
     event_dispatcher.sponsor_event(created_event_address, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
@@ -144,9 +137,10 @@ fn test_sponsor_event_flow() {
     let latest_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
     assert(latest_event_balance == sponsor_amount, 'Wrong event balance');
     
-    // Check tokens were transferred to sponsor contract
-    // let sponsor_balance = token_dispatcher.balanceOf(sponsor_contract_address);
-    // assert!(sponsor_balance == sponsor_amount, "Inaccurate sponsor balance");  
+    // Check tokens were transferred to sponsorhip contract
+    let sponsor_balance = token_dispatcher.balanceOf(sponsor_contract_address);
+    assert!(sponsor_balance == sponsor_amount, "Inaccurate sponsor balance");  
 }
+
 
 
