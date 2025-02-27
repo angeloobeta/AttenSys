@@ -947,6 +947,17 @@ fn test_approve_registration() {
     let status: u8 = *all_request[0].status;
     assert(status == 1, 'not approved');
 
+    let allbootcamp = dispatcher.get_registered_bootcamp(student_address);
+    assert(allbootcamp.len() > 0, 'wrong regisration count');
+
+    let specific_bootcamp = dispatcher.get_specific_organization_registered_bootcamp(owner_address, student_address);
+    assert(specific_bootcamp.len() > 0, 'wrong specific count');
+    
+    start_cheat_caller_address(contract_address, student_address);
+    dispatcher.mark_attendance_for_a_class(owner_address,owner_address,0,0);
+    stop_cheat_caller_address(contract_address);
+    let attendance_status = dispatcher.get_class_attendance_status(owner_address,0,0,student_address);
+    assert(attendance_status, 'not marked');
     spy
         .assert_emitted(
             @array![
