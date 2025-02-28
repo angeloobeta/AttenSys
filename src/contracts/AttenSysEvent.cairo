@@ -46,7 +46,7 @@ pub trait IAttenSysEvent<TContractState> {
     fn claim_admin_ownership(ref self: TContractState);
     fn get_admin(self: @TContractState) -> ContractAddress;
     fn get_new_admin(self: @TContractState) -> ContractAddress;
-    fn sponsor_event(ref self: TContractState, event: ContractAddress, amt: u256, uri: ByteArray);
+    fn sponsor_event(ref self: TContractState, event_identifier: u256, amt: u256, uri: ByteArray);
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
     fn set_sponsorship_contract(ref self: TContractState, sponsor_contract_address: ContractAddress);
     fn get_event_sponsorship_balance(self: @TContractState, event: ContractAddress) -> u256;
@@ -603,11 +603,12 @@ mod AttenSysEvent {
         }
 
         fn sponsor_event(
-            ref self: ContractState, event: ContractAddress, amt: u256, uri: ByteArray,
+            ref self: ContractState, event_identifier: u256, amt: u256, uri: ByteArray,
         ) {
-            assert(!event.is_zero(), 'not an event');
+            assert(event_identifier > 0, 'Invalid event ID');
             assert(uri.len() > 0, 'uri is empty');
             // check if such event exists
+            let event = self.specific_event_with_identifier.entry(event_identifier).read().event_organizer;
             assert(self.event_exists.entry(event).read(), 'No such event');
             assert(amt > 0, 'Invalid amount');
             let sponsor = get_caller_address();

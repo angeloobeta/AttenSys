@@ -130,7 +130,7 @@ fn test_successful_sponsor_event_flow() {
 
 
     start_cheat_caller_address(event_contract_address, sponsor_address);
-    event_dispatcher.sponsor_event(created_event_address, sponsor_amount, sponsor_uri.clone());
+    event_dispatcher.sponsor_event(1, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
       
     // Check event balance was updated
@@ -216,7 +216,7 @@ fn test_successful_withdrawal_by_event_creator() {
 
 
     start_cheat_caller_address(event_contract_address, sponsor_address);
-    event_dispatcher.sponsor_event(created_event_address, sponsor_amount, sponsor_uri.clone());
+    event_dispatcher.sponsor_event(1, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
       
     // Check event balance was updated
@@ -314,7 +314,7 @@ fn test_unauthorized_event_withdrawal() {
 
 
     start_cheat_caller_address(event_contract_address, sponsor_address);
-    event_dispatcher.sponsor_event(created_event_address, sponsor_amount, sponsor_uri.clone());
+    event_dispatcher.sponsor_event(1, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
       
     // Check event balance was updated
