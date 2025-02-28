@@ -40,34 +40,34 @@ async function main() {
         console.log(error);
         process.exit(1);
     }
-    const contract_owner = "0x0334c5Dbc6F751794Ab084D8Ba2715C9C5A464fb2ba4503312e015E16422C475"
+    const contract_owner = "0x067828E887e53Ba4A7A14A3666103A9a79dA75D0C1e4A288e9a45Bf5CC660B0B"
     const STRK = "0x04718f5a0Fc34cC1AF16A1cdee98fFB20C31f5cD61D6Ab07201858f4287c938D"
     const zero_address = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-    console.log("beginning declaring......\n")
+    console.log("beginning deployment......\n")
 
     //for nft
-    const NFTCallData = new CallData(NFTsierraCode.abi);
-    const constructor_nft = NFTCallData.compile("constructor", {
-        base_uri: "kenbaseuri",
-        name_ : "Kennft",
-        symbol: "KFT",
-    });
+    // const NFTCallData = new CallData(NFTsierraCode.abi);
+    // const constructor_nft = NFTCallData.compile("constructor", {
+    //     base_uri: "kenbaseuri",
+    //     name_ : "Kennft",
+    //     symbol: "KFT",
+    // });
 
-    const nftdeployResponse = await account0.declareAndDeploy({
-        contract: NFTsierraCode,
-        casm: NFTcasmCode,
-        constructorCalldata: constructor_nft,
-        salt: stark.randomAddress(),
-    });
+    // const nftdeployResponse = await account0.declareAndDeploy({
+    //     contract: NFTsierraCode,
+    //     casm: NFTcasmCode,
+    //     constructorCalldata: constructor_nft,
+    //     salt: stark.randomAddress(),
+    // });
 
-       // Connect the new course contract instance :
-       const AttensysNFTContract = new Contract(
-        NFTsierraCode.abi,
-        nftdeployResponse.deploy.contract_address,
-        provider
-    );
-    console.log("nft deployed at", AttensysNFTContract.address)
+    //    // Connect the new course contract instance :
+    //    const AttensysNFTContract = new Contract(
+    //     NFTsierraCode.abi,
+    //     nftdeployResponse.deploy.contract_address,
+    //     provider
+    // );
+    // console.log("nft deployed at", AttensysNFTContract.address)
 
 
 
@@ -97,143 +97,143 @@ async function main() {
     // console.log(nft_hash)
 
 
-    // const nft_hash = "0x0102b3f7e66131f95d7520fdda526329f2fb23b93a7c8f33c2e375dfeab77615"
+    const nft_hash = "0x01afed33f3c6efab13feb1b13ec9c1d3cf05c77fabf6577bea21911b7b8bb889"
 
-    // console.log("nft contract declared......\n")
+    console.log("nft contract declared......\n")
 
     
-//     console.log("deploying attensys course.....\n");
+    console.log("deploying attensys course.....\n");
 
-//     //for course 
-//     const CourseCallData = new CallData(AsierraCode.abi);
-//     const constructor_a = CourseCallData.compile("constructor", {
-//         owner: contract_owner,
-//         _hash : nft_hash
-//     });
+    //for course 
+    const CourseCallData = new CallData(AsierraCode.abi);
+    const constructor_a = CourseCallData.compile("constructor", {
+        owner: contract_owner,
+        _hash : nft_hash
+    });
 
-//     const coursedeployResponse = await account0.declareAndDeploy({
-//         contract: AsierraCode,
-//         casm: AcasmCode,
-//         constructorCalldata: constructor_a,
-//         salt: stark.randomAddress(),
-//     });
+    const coursedeployResponse = await account0.declareAndDeploy({
+        contract: AsierraCode,
+        casm: AcasmCode,
+        constructorCalldata: constructor_a,
+        salt: stark.randomAddress(),
+    });
 
-//        // Connect the new course contract instance :
-//        const AttensysCourseContract = new Contract(
-//         AsierraCode.abi,
-//         coursedeployResponse.deploy.contract_address,
-//         provider
-//     );
+       // Connect the new course contract instance :
+       const AttensysCourseContract = new Contract(
+        AsierraCode.abi,
+        coursedeployResponse.deploy.contract_address,
+        provider
+    );
 
-//     console.log("deploying attensys event.....\n");
-//    //for event 
-//    const EventCallData = new CallData(BsierraCode.abi);
-//    const constructor_b = EventCallData.compile("constructor", {
-//        owner: contract_owner,
-//        _hash : nft_hash,
-//        _token_address: STRK,
-//        sponsorship_contract_address : zero_address,
-//    });
+    console.log("deploying attensys event.....\n");
+   //for event 
+   const EventCallData = new CallData(BsierraCode.abi);
+   const constructor_b = EventCallData.compile("constructor", {
+       owner: contract_owner,
+       _hash : nft_hash,
+       _token_address: STRK,
+       sponsorship_contract_address : zero_address,
+   });
 
-//    const eventdeployResponse = await account0.declareAndDeploy({
-//        contract: BsierraCode,
-//        casm: BcasmCode,
-//        constructorCalldata: constructor_b,
-//        salt: stark.randomAddress(),
-//    });
+   const eventdeployResponse = await account0.declareAndDeploy({
+       contract: BsierraCode,
+       casm: BcasmCode,
+       constructorCalldata: constructor_b,
+       salt: stark.randomAddress(),
+   });
 
-//       // Connect the new contract instance :
-//       const AttensysEventContract = new Contract(
-//         BsierraCode.abi,
-//         eventdeployResponse.deploy.contract_address,
-//        provider
-//    ); 
+      // Connect the new contract instance :
+      const AttensysEventContract = new Contract(
+        BsierraCode.abi,
+        eventdeployResponse.deploy.contract_address,
+       provider
+   ); 
 
-//    console.log("deploying attensys org.....\n");
-//    //for org 
-//    const OrgCallData = new CallData(CsierraCode.abi);
-//    const constructor_c = OrgCallData.compile("constructor", {
-//         admin: contract_owner,
-//        class_hash : nft_hash,
-//        _token_address: STRK,
-//        sponsorship_contract_address : zero_address,
-//    });
+   console.log("deploying attensys org.....\n");
+   //for org 
+   const OrgCallData = new CallData(CsierraCode.abi);
+   const constructor_c = OrgCallData.compile("constructor", {
+        admin: contract_owner,
+       class_hash : nft_hash,
+       _token_address: STRK,
+       sponsorship_contract_address : zero_address,
+   });
 
-//    const orgdeployResponse = await account0.declareAndDeploy({
-//        contract: CsierraCode,
-//        casm: CcasmCode,
-//        constructorCalldata: constructor_c,
-//        salt: stark.randomAddress(),
-//    });
+   const orgdeployResponse = await account0.declareAndDeploy({
+       contract: CsierraCode,
+       casm: CcasmCode,
+       constructorCalldata: constructor_c,
+       salt: stark.randomAddress(),
+   });
 
-//       // Connect the new contract instance :
-//       const AttensysOrgContract = new Contract(
-//         CsierraCode.abi,
-//         orgdeployResponse.deploy.contract_address,
-//        provider
-//    );
+      // Connect the new contract instance :
+      const AttensysOrgContract = new Contract(
+        CsierraCode.abi,
+        orgdeployResponse.deploy.contract_address,
+       provider
+   );
 
-//    console.log("deploying attensys sponsor contract.....\n");
+   console.log("deploying attensys sponsor contract.....\n");
    
 
-//    const SponsorCallData = new CallData(KsierraCode.abi);
-//    const constructor_k = SponsorCallData.compile("constructor", {
-//         admin: contract_owner,
-//         organization_contract_address : AttensysOrgContract.address,
-//         event_contract_address: AttensysOrgContract.address
-//    });
+   const SponsorCallData = new CallData(KsierraCode.abi);
+   const constructor_k = SponsorCallData.compile("constructor", {
+        admin: contract_owner,
+        organization_contract_address : AttensysOrgContract.address,
+        event_contract_address: AttensysOrgContract.address
+   });
 
-//    const sponsordeployResponse = await account0.declareAndDeploy({
-//        contract: KsierraCode,
-//        casm: KcasmCode,
-//        constructorCalldata: constructor_k,
-//        salt: stark.randomAddress(),
-//    });
+   const sponsordeployResponse = await account0.declareAndDeploy({
+       contract: KsierraCode,
+       casm: KcasmCode,
+       constructorCalldata: constructor_k,
+       salt: stark.randomAddress(),
+   });
 
-//       // Connect the new contract instance :
-//       const AttensysSponsorContract = new Contract(
-//         KsierraCode.abi,
-//         sponsordeployResponse.deploy.contract_address,
-//        provider
-//    );
+      // Connect the new contract instance :
+      const AttensysSponsorContract = new Contract(
+        KsierraCode.abi,
+        sponsordeployResponse.deploy.contract_address,
+       provider
+   );
 
    
    
-//     console.log(
-//         `Attensys course deployed to address: ${AttensysCourseContract.address}`
-//     );
-//     console.log(
-//         `Attensys Event deployed to address: ${AttensysEventContract.address}`
-//     ); 
-//     console.log(
-//         `Attensys Org deployed to address: ${AttensysOrgContract.address}`
-//     );
-//     console.log(
-//         `Attensys Sponsor deployed to address: ${AttensysSponsorContract.address}`
-//     );
+    console.log(
+        `Attensys course deployed to address: ${AttensysCourseContract.address}`
+    );
+    console.log(
+        `Attensys Event deployed to address: ${AttensysEventContract.address}`
+    ); 
+    console.log(
+        `Attensys Org deployed to address: ${AttensysOrgContract.address}`
+    );
+    console.log(
+        `Attensys Sponsor deployed to address: ${AttensysSponsorContract.address}`
+    );
 
-//     const abiFileContent = `${Comment}\n\n
-//     export const attensysCourseAbi = ${JSON.stringify(AttensysCourseContract.abi, null, 2)};  
-//     export const attensysEventAbi = ${JSON.stringify(AttensysEventContract.abi, null, 2)};   
-//     export const attensysOrgAbi = ${JSON.stringify(AttensysOrgContract.abi, null, 2)};
-//     export const attensysSponsorAbi = ${JSON.stringify(AttensysSponsorContract.abi, null, 2)};
-//   `;
+    const abiFileContent = `${Comment}\n\n
+    export const attensysCourseAbi = ${JSON.stringify(AttensysCourseContract.abi, null, 2)};  
+    export const attensysEventAbi = ${JSON.stringify(AttensysEventContract.abi, null, 2)};   
+    export const attensysOrgAbi = ${JSON.stringify(AttensysOrgContract.abi, null, 2)};
+    export const attensysSponsorAbi = ${JSON.stringify(AttensysSponsorContract.abi, null, 2)};
+  `;
 
-//     const contracts = `${Comment}\n\n
-//     export const attensysCourseAddress = ${JSON.stringify(AttensysCourseContract.address, null, 2)};  
-//     export const attensysEventAddress = ${JSON.stringify(AttensysEventContract.address, null, 2)};   
-//     export const attensysOrgAddress = ${JSON.stringify(AttensysOrgContract.address, null, 2)};
-//     export const attensysSponsorAddress = ${JSON.stringify(AttensysSponsorContract.address, null, 2)};
-//     `;
+    const contracts = `${Comment}\n\n
+    export const attensysCourseAddress = ${JSON.stringify(AttensysCourseContract.address, null, 2)};  
+    export const attensysEventAddress = ${JSON.stringify(AttensysEventContract.address, null, 2)};   
+    export const attensysOrgAddress = ${JSON.stringify(AttensysOrgContract.address, null, 2)};
+    export const attensysSponsorAddress = ${JSON.stringify(AttensysSponsorContract.address, null, 2)};
+    `;
     
-//   // Write to abi.ts
-//   const formattedAbiFileContent = await prettier.format(abiFileContent, { parser: 'typescript' });
-//   fs.writeFileSync(OUTPUT_FILE, formattedAbiFileContent);
-//   console.log(`✨✅ ABI file generated and saved at: ${OUTPUT_FILE}\n`);
+  // Write to abi.ts
+  const formattedAbiFileContent = await prettier.format(abiFileContent, { parser: 'typescript' });
+  fs.writeFileSync(OUTPUT_FILE, formattedAbiFileContent);
+  console.log(`✨✅ ABI file generated and saved at: ${OUTPUT_FILE}\n`);
 
-//   const formattedContractContent = await prettier.format(contracts, { parser: 'typescript' });
-//   fs.writeFileSync(CONTRACT_OUTPUT_FILE, formattedContractContent);
-//   console.log(`✨✅ Contract addresses generated and saved at: ${CONTRACT_OUTPUT_FILE}\n`);
+  const formattedContractContent = await prettier.format(contracts, { parser: 'typescript' });
+  fs.writeFileSync(CONTRACT_OUTPUT_FILE, formattedContractContent);
+  console.log(`✨✅ Contract addresses generated and saved at: ${CONTRACT_OUTPUT_FILE}\n`);
 }
 
 
