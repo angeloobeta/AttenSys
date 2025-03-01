@@ -11,29 +11,29 @@ pub trait IAttenSysCourse<TContractState> {
         base_uri: ByteArray,
         name_: ByteArray,
         symbol: ByteArray,
-        course_ipfs_uri: ByteArray
+        course_ipfs_uri: ByteArray,
     ) -> ContractAddress;
     fn add_replace_course_content(
         ref self: TContractState,
         course_identifier: u256,
         owner_: ContractAddress,
         new_course_uri_a: felt252,
-        new_course_uri_b: felt252
+        new_course_uri_b: felt252,
     );
     //untested
     fn finish_course_claim_certification(ref self: TContractState, course_identifier: u256);
     //untested
     fn check_course_completion_status_n_certification(
-        self: @TContractState, course_identifier: u256, candidate: ContractAddress
+        self: @TContractState, course_identifier: u256, candidate: ContractAddress,
     ) -> bool;
     fn get_course_infos(
-        self: @TContractState, course_identifiers: Array<u256>
+        self: @TContractState, course_identifiers: Array<u256>,
     ) -> Array<AttenSysCourse::Course>;
     //untested
     fn get_user_completed_courses(self: @TContractState, user: ContractAddress) -> Array<u256>;
     fn get_all_courses_info(self: @TContractState) -> Array<AttenSysCourse::Course>;
     fn get_all_creator_courses(
-        self: @TContractState, owner_: ContractAddress
+        self: @TContractState, owner_: ContractAddress,
     ) -> Array<AttenSysCourse::Course>;
     fn get_creator_info(self: @TContractState, creator: ContractAddress) -> AttenSysCourse::Creator;
     fn get_course_nft_contract(self: @TContractState, course_identifier: u256) -> ContractAddress;
@@ -42,6 +42,9 @@ pub trait IAttenSysCourse<TContractState> {
     fn get_admin(self: @TContractState) -> ContractAddress;
     fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn get_total_course_completions(self: @TContractState, course_identifier: u256) -> u256;
+    fn ensure_admin(self: @TContractState);
+    fn get_suspension_status(self: @TContractState, course_identifier: u256) -> bool;
+    fn toggle_suspension(ref self: TContractState, course_identifier: u256, suspend: bool);
 }
 
 //Todo, make a count of the total number of users that finished the course.
@@ -57,11 +60,11 @@ pub mod AttenSysCourse {
     use super::IAttenSysNftDispatcherTrait;
     use core::starknet::{
         ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash,
-        contract_address_const
+        contract_address_const,
     };
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
-        MutableVecTrait
+        MutableVecTrait,
     };
 
 
@@ -72,6 +75,8 @@ pub mod AttenSysCourse {
         CourseReplaced: CourseReplaced,
         CourseCertClaimed: CourseCertClaimed,
         AdminTransferred: AdminTransferred,
+        CourseSuspended: CourseSuspended,
+        CourseUnsuspended: CourseUnsuspended,
     }
 
     #[derive(starknet::Event, Clone, Debug, Drop)]
@@ -102,6 +107,16 @@ pub mod AttenSysCourse {
     #[derive(starknet::Event, Clone, Debug, Drop)]
     pub struct AdminTransferred {
         pub new_admin: ContractAddress,
+    }
+
+    #[derive(starknet::Event, Clone, Debug, Drop)]
+    pub struct CourseSuspended {
+        course_identifier: u256,
+    }
+
+    #[derive(starknet::Event, Clone, Debug, Drop)]
+    pub struct CourseUnsuspended {
+        course_identifier: u256,
     }
 
     #[storage]
@@ -148,6 +163,7 @@ pub mod AttenSysCourse {
         pub accessment: bool,
         pub uri: Uri,
         pub course_ipfs_uri: ByteArray,
+        pub is_suspended: bool,
     }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -171,7 +187,7 @@ pub mod AttenSysCourse {
             base_uri: ByteArray,
             name_: ByteArray,
             symbol: ByteArray,
-            course_ipfs_uri: ByteArray
+            course_ipfs_uri: ByteArray,
         ) -> ContractAddress {
             //make an address zero check
             let identifier_count = self.identifier_tracker.read();
@@ -185,13 +201,14 @@ pub mod AttenSysCourse {
                 current_creator_info.number_of_courses += 1;
                 current_creator_info.creator_status = true;
             }
-            let empty_uri = Uri { first: '', second: '', };
+            let empty_uri = Uri { first: '', second: '' };
             let mut course_call_data: Course = Course {
                 owner: owner_,
                 course_identifier: current_identifier,
                 accessment: accessment_,
                 uri: empty_uri,
-                course_ipfs_uri: course_ipfs_uri.clone()
+                course_ipfs_uri: course_ipfs_uri.clone(),
+                is_suspended: false,
             };
 
             self
@@ -204,8 +221,9 @@ pub mod AttenSysCourse {
                         course_identifier: current_identifier,
                         accessment: accessment_,
                         uri: empty_uri,
-                        course_ipfs_uri: course_ipfs_uri.clone()
-                    }
+                        course_ipfs_uri: course_ipfs_uri.clone(),
+                        is_suspended: false,
+                    },
                 );
             self.course_creator_info.entry(owner_).write(current_creator_info);
             self
@@ -213,6 +231,7 @@ pub mod AttenSysCourse {
                 .entry(current_identifier)
                 .write(course_call_data);
             self.identifier_tracker.write(current_identifier);
+
             // constructor arguments
             let mut constructor_args = array![];
             base_uri.serialize(ref constructor_args);
@@ -222,7 +241,7 @@ pub mod AttenSysCourse {
 
             //deploy contract
             let (deployed_contract_address, _) = deploy_syscall(
-                self.hash.read(), contract_address_salt, constructor_args.span(), false
+                self.hash.read(), contract_address_salt, constructor_args.span(), false,
             )
                 .expect('failed to deploy_syscall');
             self
@@ -244,7 +263,7 @@ pub mod AttenSysCourse {
                         name_: name_,
                         symbol: symbol,
                         course_ipfs_uri: course_ipfs_uri,
-                    }
+                    },
                 );
             deployed_contract_address
         }
@@ -258,8 +277,10 @@ pub mod AttenSysCourse {
             course_identifier: u256,
             owner_: ContractAddress,
             new_course_uri_a: felt252,
-            new_course_uri_b: felt252
+            new_course_uri_b: felt252,
         ) {
+            let is_suspended = self.get_suspension_status(course_identifier);
+            assert(is_suspended == false, 'Already suspended');
             let mut current_course_info: Course = self
                 .specific_course_info_with_identifer
                 .entry(course_identifier)
@@ -267,7 +288,7 @@ pub mod AttenSysCourse {
             let pre_existing_counter = self.identifier_tracker.read();
             assert(course_identifier <= pre_existing_counter, 'course non-existent');
             assert(current_course_info.owner == get_caller_address(), 'not owner');
-            let call_data: Uri = Uri { first: new_course_uri_a, second: new_course_uri_b, };
+            let call_data: Uri = Uri { first: new_course_uri_a, second: new_course_uri_b };
             current_course_info.uri = call_data;
             self
                 .specific_course_info_with_identifer
@@ -279,20 +300,13 @@ pub mod AttenSysCourse {
             if self.all_course_info.len() == 0 {
                 self.all_course_info.append().write(current_course_info.clone());
             } else {
-                for i in 0
-                    ..self
-                        .all_course_info
-                        .len() {
-                            if self
-                                .all_course_info
-                                .at(i)
-                                .read()
-                                .course_identifier == course_identifier {
-                                self.all_course_info.at(i).uri.write(call_data);
-                            } else {
-                                self.all_course_info.append().write(current_course_info.clone());
-                            }
-                        };
+                for i in 0..self.all_course_info.len() {
+                    if self.all_course_info.at(i).read().course_identifier == course_identifier {
+                        self.all_course_info.at(i).uri.write(call_data);
+                    } else {
+                        self.all_course_info.append().write(current_course_info.clone());
+                    }
+                };
             };
             //run a loop to update the creator content storage data
             let mut i: u64 = 0;
@@ -314,7 +328,7 @@ pub mod AttenSysCourse {
                         owner_: owner_,
                         new_course_uri_a: new_course_uri_a,
                         new_course_uri_b: new_course_uri_b,
-                    }
+                    },
                 );
         }
 
@@ -323,6 +337,8 @@ pub mod AttenSysCourse {
             //todo : verifier check, get a value from frontend, confirm the hash if it matches with
             //what is being saved. goal is to avoid fraudulent course claim.
             //todo issue certification. (whitelist address)
+            let is_suspended = self.get_suspension_status(course_identifier);
+            assert(is_suspended == false, 'Already suspended');
             self.completion_status.entry((get_caller_address(), course_identifier)).write(true);
             self.completed_courses.entry(get_caller_address()).append().write(course_identifier);
             let nft_contract_address = self
@@ -331,7 +347,7 @@ pub mod AttenSysCourse {
                 .read();
 
             let nft_dispatcher = super::IAttenSysNftDispatcher {
-                contract_address: nft_contract_address
+                contract_address: nft_contract_address,
             };
 
             let nft_id = self
@@ -347,19 +363,19 @@ pub mod AttenSysCourse {
                 .emit(
                     CourseCertClaimed {
                         course_identifier: course_identifier, candidate: get_caller_address(),
-                    }
+                    },
                 );
         }
 
 
         fn check_course_completion_status_n_certification(
-            self: @ContractState, course_identifier: u256, candidate: ContractAddress
+            self: @ContractState, course_identifier: u256, candidate: ContractAddress,
         ) -> bool {
             self.completion_status.entry((candidate, course_identifier)).read()
         }
 
         fn get_course_infos(
-            self: @ContractState, course_identifiers: Array<u256>
+            self: @ContractState, course_identifiers: Array<u256>,
         ) -> Array<Course> {
             let mut course_info_list: Array<Course> = array![];
             for element in course_identifiers {
@@ -388,10 +404,9 @@ pub mod AttenSysCourse {
 
         fn get_all_courses_info(self: @ContractState) -> Array<Course> {
             let mut arr = array![];
-            for i in 0
-                ..self.all_course_info.len() {
-                    arr.append(self.all_course_info.at(i).read());
-                };
+            for i in 0..self.all_course_info.len() {
+                arr.append(self.all_course_info.at(i).read());
+            };
             arr
         }
 
@@ -417,7 +432,7 @@ pub mod AttenSysCourse {
         }
 
         fn get_course_nft_contract(
-            self: @ContractState, course_identifier: u256
+            self: @ContractState, course_identifier: u256,
         ) -> ContractAddress {
             self.course_nft_contract_address.entry(course_identifier).read()
         }
@@ -459,6 +474,34 @@ pub mod AttenSysCourse {
                 0
             } else {
                 next_nft_id - 1
+            }
+        }
+        fn ensure_admin(self: @ContractState) {
+            let caller = get_caller_address();
+            assert(caller == self.get_admin(), 'Not admin');
+        }
+
+        fn get_suspension_status(self: @ContractState, course_identifier: u256) -> bool {
+            self.specific_course_info_with_identifer.entry(course_identifier).is_suspended.read()
+        }
+
+        fn toggle_suspension(ref self: ContractState, course_identifier: u256, suspend: bool) {
+            self.ensure_admin();
+
+            let course = self.specific_course_info_with_identifer.entry(course_identifier).read();
+
+            if course.is_suspended != suspend {
+                self
+                    .specific_course_info_with_identifer
+                    .entry(course_identifier)
+                    .is_suspended
+                    .write(suspend);
+
+                if suspend {
+                    self.emit(CourseSuspended { course_identifier });
+                } else {
+                    self.emit(CourseUnsuspended { course_identifier });
+                }
             }
         }
     }

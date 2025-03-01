@@ -2,7 +2,11 @@ use starknet::{ContractAddress, contract_address_const, ClassHash};
 // get_caller_address,
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global,
+<<<<<<< HEAD
     spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address
+=======
+    spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address,
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
 };
 
 
@@ -21,9 +25,14 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
     OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated,
+<<<<<<< HEAD
     ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved, RegistrationDeclined
+=======
+    ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved, RegistrationDeclined,
+    OrganizationSuspended, BootCampSuspended,
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
 };
-// use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
+// use attendsys::contracts::AttenSysSponsor:: { AttenSysSponsor, IAttenSysSponsorDispatcher };
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 // use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
 // use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
@@ -32,6 +41,8 @@ use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
 use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
 use attendsys::contracts::AttenSysSponsor::IERC20Dispatcher;
 use attendsys::contracts::AttenSysSponsor::IERC20DispatcherTrait;
+use attendsys::contracts::mock::ERC20;
+use openzeppelin::token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
 #[starknet::interface]
 pub trait IERC721<TContractState> {
@@ -42,16 +53,16 @@ pub trait IERC721<TContractState> {
         from: ContractAddress,
         to: ContractAddress,
         token_id: u256,
-        data: Span<felt252>
+        data: Span<felt252>,
     );
     fn transfer_from(
-        ref self: TContractState, from: ContractAddress, to: ContractAddress, token_id: u256
+        ref self: TContractState, from: ContractAddress, to: ContractAddress, token_id: u256,
     );
     fn approve(ref self: TContractState, to: ContractAddress, token_id: u256);
     fn set_approval_for_all(ref self: TContractState, operator: ContractAddress, approved: bool);
     fn get_approved(self: @TContractState, token_id: u256) -> ContractAddress;
     fn is_approved_for_all(
-        self: @TContractState, owner: ContractAddress, operator: ContractAddress
+        self: @TContractState, owner: ContractAddress, operator: ContractAddress,
     ) -> bool;
 
     // IERC721Metadata
@@ -63,12 +74,28 @@ pub trait IERC721<TContractState> {
     fn mint(ref self: TContractState, recipient: ContractAddress, token_id: u256);
 }
 
+// fn deploy_erc20_token() -> ContractAddress{
+//     let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+//     let initial_supply: u256 = 1_000_000_u256;
 
-fn deploy_contract(name: ByteArray, hash: ClassHash,) -> ContractAddress {
+//     let contract_class = declare("ERC20").unwrap();
+
+//     let mut constructor_args = ArrayTrait::new();
+//     initial_supply.serialize(ref constructor_args);
+//     sponsor_address.serialize(ref constructor_args);
+
+//     let (contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+//     let balance = ERC20ABIDispatcher { contract_address }.balance_of(sponsor_address);
+//     assert(balance == initial_supply, 'Incorrect initial balance');
+//     contract_address
+// }
+
+fn deploy_contract(name: ByteArray, hash: ClassHash) -> ContractAddress {
     let contract = declare(name).unwrap();
     let mut constuctor_arg = ArrayTrait::new();
     let contract_owner_address: ContractAddress = contract_address_const::<
-        'contract_owner_address'
+        'contract_owner_address',
     >();
 
     contract_owner_address.serialize(ref constuctor_arg);
@@ -82,14 +109,14 @@ fn deploy_organization_contract(
     name: ByteArray,
     hash: ClassHash,
     _token_address: ContractAddress,
-    sponsor_contract_address: ContractAddress
+    sponsor_contract_address: ContractAddress,
 ) -> ContractAddress {
     let contract = declare(name).unwrap();
 
     let mut constuctor_arg = ArrayTrait::new();
 
     let contract_owner_address: ContractAddress = contract_address_const::<
-        'contract_owner_address'
+        'contract_owner_address',
     >();
 
     contract_owner_address.serialize(ref constuctor_arg);
@@ -112,7 +139,7 @@ fn deploy_sponsorship_contract(name: ByteArray, organization: ContractAddress) -
     let mut constructor_arg = ArrayTrait::new();
 
     let contract_owner_address: ContractAddress = contract_address_const::<
-        'contract_owner_address'
+        'contract_owner_address',
     >();
 
     let event: ContractAddress = contract_address_const::<'event_address'>();
@@ -173,7 +200,7 @@ fn test_create_course() {
             token_uri_a.clone(),
             nft_name_a.clone(),
             nft_symb_a.clone(),
-            token_uri_a_1
+            token_uri_a_1,
         );
     spy
         .assert_emitted(
@@ -188,11 +215,19 @@ fn test_create_course() {
                             base_uri: token_uri_a.clone(),
                             name_: nft_name_a,
                             symbol: nft_symb_a,
+<<<<<<< HEAD
                             course_ipfs_uri: token_uri_a.clone()
                         }
                     )
                 )
             ]
+=======
+                            course_ipfs_uri: token_uri_a.clone(),
+                        },
+                    ),
+                ),
+            ],
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
         );
     dispatcher
         .create_course(
@@ -201,7 +236,11 @@ fn test_create_course() {
             token_uri_b.clone(),
             nft_name_b.clone(),
             nft_symb_b.clone(),
+<<<<<<< HEAD
             token_uri_b_2.clone()
+=======
+            token_uri_b_2.clone(),
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
         );
     dispatcher
         .create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
@@ -273,11 +312,11 @@ fn test_finish_course_n_claim() {
                     contract_address,
                     AttenSysCourse::Event::CourseCertClaimed(
                         AttenSysCourse::CourseCertClaimed {
-                            course_identifier: 1, candidate: viewer1_address
-                        }
-                    )
-                )
-            ]
+                            course_identifier: 1, candidate: viewer1_address,
+                        },
+                    ),
+                ),
+            ],
         );
     start_cheat_caller_address(contract_address, viewer2_address);
     dispatcher.finish_course_claim_certification(2);
@@ -332,11 +371,11 @@ fn test_add_replace_course_content() {
                             course_identifier: 1,
                             owner_: owner_address,
                             new_course_uri_a: '123',
-                            new_course_uri_b: '567'
-                        }
-                    )
-                )
-            ]
+                            new_course_uri_b: '567',
+                        },
+                    ),
+                ),
+            ],
         );
     let array_calldata = array![1];
     let course_info = dispatcher.get_course_infos(array_calldata);
@@ -363,15 +402,19 @@ fn test_create_event() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     // mock event with test addresses
     let contract_address = deploy_organization_contract(
-        "AttenSysEvent", hash, test_address(), test_address()
+        "AttenSysEvent", hash, test_address(), test_address(),
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let owner_address_two: ContractAddress = contract_address_const::<'owner_two'>();
+    let owner_address_three: ContractAddress = contract_address_const::<'owner_three'>();
     let dispatcher = IAttenSysEventDispatcher { contract_address };
     let token_uri: ByteArray = "https://dummy_uri.com/your_id";
     let event_name = "web3";
     let nft_name = "onlydust";
     let nft_symb = "OD";
+    let event_uri: ByteArray = "QmExampleIPFSHash";
+
+    // Create first event
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher
         .create_event(
@@ -382,20 +425,27 @@ fn test_create_event() {
             nft_symb,
             2238493,
             32989989,
-            true
+            true,
+            event_uri.clone(),
         );
     let event_details_check = dispatcher.get_event_details(1);
+    //println!("Event URI: {:?}", event_details_check.event_uri);
     assert(event_details_check.event_name == event_name, 'wrong_name');
     assert(event_details_check.time.registration_open == true, 'not set');
     assert(event_details_check.time.start_time == 2238493, 'wrong start');
     assert(event_details_check.time.end_time == 32989989, 'wrong end');
     assert(event_details_check.event_organizer == owner_address, 'wrong owner');
+    assert(event_details_check.event_uri == event_uri, 'wrong uri');
+
+    // Create second event
 
     start_cheat_caller_address(contract_address, owner_address_two);
     let token_uri_two: ByteArray = "https://dummy_uri.com/your_id";
     let event_name_two = "web2";
     let nft_name_two = "web3bridge";
     let nft_symb_two = "wb3";
+    let event_uri_two: ByteArray = "QmYwAPJzv5CZsnAzt8auVZRnHJxF8d1swomC5nKkJY6Y3A";
+
     dispatcher
         .create_event(
             owner_address_two,
@@ -405,11 +455,39 @@ fn test_create_event() {
             nft_symb_two,
             2238493,
             32989989,
-            true
+            true,
+            event_uri_two.clone(),
         );
 
     let event_details_check_two = dispatcher.get_event_details(2);
     assert(event_details_check_two.event_name == event_name_two, 'wrong_name');
+    assert(event_details_check_two.event_uri == event_uri_two, 'wrongg uri');
+
+    // Create third event without event uri
+
+    start_cheat_caller_address(contract_address, owner_address_three);
+    let token_uri_three: ByteArray = "https://dummy_uri.com/your_id";
+    let event_name_three = "web4";
+    let nft_name_three = "frankyaccess";
+    let nft_symb_three = "fac";
+    let event_uri_3: ByteArray = "a";
+
+    dispatcher
+        .create_event(
+            owner_address_three,
+            event_name_three.clone(),
+            token_uri_three,
+            nft_name_three,
+            nft_symb_three,
+            2238493,
+            32989989,
+            true,
+            event_uri_3.clone(),
+        );
+
+    let event_details_check_three = dispatcher.get_event_details(3);
+    assert(event_details_check_three.event_name == event_name_three, 'wrong_name');
+    assert(event_details_check_three.event_uri == event_uri_3, 'wronggg uri');
 }
 
 #[test]
@@ -417,7 +495,7 @@ fn test_reg_nd_mark() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     // mock event with test addresses
     let contract_address = deploy_organization_contract(
-        "AttenSysEvent", hash, test_address(), test_address()
+        "AttenSysEvent", hash, test_address(), test_address(),
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let attendee1_address: ContractAddress = contract_address_const::<'attendee1_address'>();
@@ -430,10 +508,20 @@ fn test_reg_nd_mark() {
     let event_name = "web3";
     let nft_name = "onlydust";
     let nft_symb = "OD";
+    let event_uri: ByteArray = "QmExampleIPFSHash";
+
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher
         .create_event(
-            owner_address, event_name.clone(), token_uri, nft_name, nft_symb, 223, 329, true
+            owner_address,
+            event_name.clone(),
+            token_uri,
+            nft_name,
+            nft_symb,
+            223,
+            329,
+            true,
+            event_uri,
         );
 
     start_cheat_block_timestamp_global(55555);
@@ -505,7 +593,7 @@ fn test_create_org_profile() {
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
 
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
 
@@ -525,11 +613,11 @@ fn test_create_org_profile() {
                     contract_address,
                     Event::OrganizationProfile(
                         OrganizationProfile {
-                            org_name: org_name_copy, org_ipfs_uri: org_ipfs_uri_copy
-                        }
-                    )
-                )
-            ]
+                            org_name: org_name_copy, org_ipfs_uri: org_ipfs_uri_copy,
+                        },
+                    ),
+                ),
+            ],
         );
 }
 
@@ -542,7 +630,7 @@ fn test_add_instructor_to_org() {
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
 
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
@@ -570,11 +658,11 @@ fn test_add_instructor_to_org() {
                     contract_address,
                     Event::InstructorAddedToOrg(
                         InstructorAddedToOrg {
-                            org_name: org_name_copy, instructor: arr_of_instructors_copy
-                        }
-                    )
-                )
-            ]
+                            org_name: org_name_copy, instructor: arr_of_instructors_copy,
+                        },
+                    ),
+                ),
+            ],
         )
 }
 
@@ -586,7 +674,7 @@ fn test_add_instructor_to_org_already_added() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
@@ -609,7 +697,7 @@ fn test_remove_instructor_from_org() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
@@ -640,11 +728,11 @@ fn test_remove_instructor_from_org() {
                     contract_address,
                     Event::InstructorRemovedFromOrg(
                         InstructorRemovedFromOrg {
-                            instructor_addr: instructor_address3, org_owner: owner_address
-                        }
-                    )
-                )
-            ]
+                            instructor_addr: instructor_address3, org_owner: owner_address,
+                        },
+                    ),
+                ),
+            ],
         )
 }
 
@@ -654,7 +742,7 @@ fn test_create_bootcamp_for_org() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
@@ -686,7 +774,7 @@ fn test_create_bootcamp_for_org() {
 
     dispatcher
         .create_bootcamp(
-            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
         );
     let updatedOrg = dispatcher.get_org_info(owner_address);
     assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
@@ -705,11 +793,11 @@ fn test_create_bootcamp_for_org() {
                             nft_symbol: nft_name_cp,
                             nft_uri: nft_symb_cp,
                             num_of_classes: 3,
-                            bootcamp_ipfs_uri: bootcamp_ipfs_uri_cp
-                        }
-                    )
-                )
-            ]
+                            bootcamp_ipfs_uri: bootcamp_ipfs_uri_cp,
+                        },
+                    ),
+                ),
+            ],
         );
 }
 
@@ -719,7 +807,7 @@ fn test_add_active_meet_link_to_bootcamp() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
@@ -744,7 +832,7 @@ fn test_add_active_meet_link_to_bootcamp() {
 
     dispatcher
         .create_bootcamp(
-            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
         );
 
     // possible to override active meet link.
@@ -762,11 +850,11 @@ fn test_add_active_meet_link_to_bootcamp() {
                             meet_link: "https:meet.google.com/hgf-snbh-snh",
                             bootcamp_id: 0,
                             is_instructor: false,
-                            org_address: owner_address
-                        }
-                    )
-                )
-            ]
+                            org_address: owner_address,
+                        },
+                    ),
+                ),
+            ],
         );
 }
 
@@ -776,7 +864,7 @@ fn test_register_for_bootcamp() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
@@ -802,13 +890,17 @@ fn test_register_for_bootcamp() {
 
     dispatcher
         .create_bootcamp(
-            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
         );
 
     dispatcher.register_for_bootcamp(org_address, 0, token_uri_clone);
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
+<<<<<<< HEAD
     let status:u8 = *all_request[0].status;
+=======
+    let status: u8 = *all_request[0].status;
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
     assert(status == 0, 'not pending');
 
     spy
@@ -817,10 +909,17 @@ fn test_register_for_bootcamp() {
                 (
                     contract_address,
                     Event::BootcampRegistration(
+<<<<<<< HEAD
                         BootcampRegistration { org_address: org_address_cp, bootcamp_id: 0 }
                     )
                 )
             ]
+=======
+                        BootcampRegistration { org_address: org_address_cp, bootcamp_id: 0 },
+                    ),
+                ),
+            ],
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
         )
 }
 
@@ -831,7 +930,7 @@ fn test_approve_registration() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let mut spy = spy_events();
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
@@ -858,7 +957,7 @@ fn test_approve_registration() {
     let nft_symb: ByteArray = "CAO";
     dispatcher
         .create_bootcamp(
-            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
         );
     stop_cheat_caller_address(contract_address);
 
@@ -876,7 +975,11 @@ fn test_approve_registration() {
     assert(updated_org_num_of_students == 1, 'inaccurate num of students');
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
+<<<<<<< HEAD
     let status:u8 = *all_request[0].status;
+=======
+    let status: u8 = *all_request[0].status;
+>>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
     assert(status == 1, 'not approved');
 
     spy
@@ -885,10 +988,78 @@ fn test_approve_registration() {
                 (
                     contract_address,
                     Event::RegistrationApproved(
-                        RegistrationApproved { student_address: student_address_cp, bootcamp_id: 0 }
-                    )
-                )
-            ]
+                        RegistrationApproved {
+                            student_address: student_address_cp, bootcamp_id: 0,
+                        },
+                    ),
+                ),
+            ],
+        );
+}
+
+#[test]
+fn test_decline_registration() {
+    //set required addreses
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let mut spy = spy_events();
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+    let student_address: ContractAddress = contract_address_const::<'candidate'>();
+
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    let mut arr_of_instructors: Array<ContractAddress> = array![];
+    arr_of_instructors.append(instructor_address);
+    dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_clone_c: ByteArray = "https://dummy_uri.com";
+    let nft_name: ByteArray = "cairo";
+    let nft_symb: ByteArray = "CAO";
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
+        );
+    stop_cheat_caller_address(contract_address);
+
+    let student_address_cp = student_address.clone();
+    start_cheat_caller_address(contract_address, student_address_cp);
+    dispatcher.register_for_bootcamp(owner_address, 0, token_uri_clone_c);
+    stop_cheat_caller_address(contract_address);
+
+    start_cheat_caller_address(contract_address, owner_address);
+    dispatcher.decline_registration(student_address, 0);
+    stop_cheat_caller_address(contract_address);
+
+    let all_request = dispatcher.get_all_registration_request(owner_address);
+    let status: u8 = *all_request[0].status;
+    assert(status == 2, 'not declined');
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    Event::RegistrationDeclined(
+                        RegistrationDeclined {
+                            student_address: student_address_cp, bootcamp_id: 0,
+                        },
+                    ),
+                ),
+            ],
         );
 }
 
@@ -967,7 +1138,7 @@ fn test_sponsor() {
     let token_addr = contract_address_const::<'token_addr'>();
     let contract_address = deploy_organization_contract("AttenSysOrg", hash, token_addr, dummy_org);
     let contract_owner_address: ContractAddress = contract_address_const::<
-        'contract_owner_address'
+        'contract_owner_address',
     >();
     // // set the organization address to the original contract address
 // let sponsor_contract_addr = deploy_sponsorship_contract(
@@ -1000,7 +1171,7 @@ fn test_when_no_org_address_add_instructor_to_org() {
     let token_addr = contract_address_const::<'new_owner'>();
     let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
     let contract_address = deploy_organization_contract(
-        "AttenSysOrg", hash, token_addr, sponsor_contract_addr
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
     );
     let owner_address: ContractAddress = contract_address_const::<'owner'>();
     let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
@@ -1015,3 +1186,667 @@ fn test_when_no_org_address_add_instructor_to_org() {
     dispatcher.add_instructor_to_org(arr_of_instructors, org_name);
 }
 
+#[test]
+fn test_sponsor_organization() {
+    // Deploy NFT contract
+    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+
+    // deploy token
+    let initial_supply: u256 = 1_000_000_u256;
+    let contract_class = declare("ERC20").unwrap();
+
+    let mut constructor_args = ArrayTrait::new();
+    initial_supply.serialize(ref constructor_args);
+    sponsor_address.serialize(ref constructor_args);
+
+    let (token_contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let org_contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr,
+    );
+
+    //deploy sponsor contract
+    let event_contract_address = contract_address_const::<'event_contract_address'>();
+    let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
+    let mut constructor_args = ArrayTrait::new();
+    org_contract_address.serialize(ref constructor_args);
+    event_contract_address.serialize(ref constructor_args);
+
+    let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
+
+    let amount: u256 = 1000_u256;
+    let uri: ByteArray = "ipfs://sponsorship-proof";
+
+    // Setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address: org_contract_address };
+
+    // Create an organization
+    start_cheat_caller_address(org_contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xorgmetadata";
+    dispatcher.setSponsorShipAddress(sponsor_contract_address);
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    stop_cheat_caller_address(org_contract_address);
+
+    //approve contract to spend token
+    let token_dispatcher = ERC20ABIDispatcher { contract_address: token_contract_address };
+    start_cheat_caller_address(token_contract_address, sponsor_address);
+    token_dispatcher.approve(sponsor_contract_address, amount);
+    stop_cheat_caller_address(token_contract_address);
+
+    let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
+    let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
+    println!("Allowance: {}", allowance);
+    println!("Sponsor balance: {}", sponsor_bal);
+
+    // Sponsor the organization
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+    start_cheat_caller_address(org_contract_address, sponsor_address);
+    dispatcher.sponsor_organization(org_address, uri.clone(), amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify sponsorship balance updated
+    let org_balance = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance = token_dispatcher.balance_of(sponsor_contract_address);
+
+    assert(org_balance == amount, 'wrong Org sponsorship bal');
+    assert(sponsorship_contract_balance == amount, 'Wrong Sponsor contract bal')
+}
+
+#[test]
+fn test_withdraw_sponsorship_fund() {
+    // Deploy NFT contract
+    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+
+    // deploy token
+    let initial_supply: u256 = 1_000_000_u256;
+    let contract_class = declare("ERC20").unwrap();
+
+    let mut constructor_args = ArrayTrait::new();
+    initial_supply.serialize(ref constructor_args);
+    sponsor_address.serialize(ref constructor_args);
+
+    let (token_contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let org_contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr,
+    );
+
+    //deploy sponsor contract
+    let event_contract_address = contract_address_const::<'event_contract_address'>();
+    let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
+    let mut constructor_args = ArrayTrait::new();
+    org_contract_address.serialize(ref constructor_args);
+    event_contract_address.serialize(ref constructor_args);
+
+    let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
+
+    let amount: u256 = 1000_u256;
+    let uri: ByteArray = "ipfs://sponsorship-proof";
+
+    // Setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address: org_contract_address };
+
+    // Create an organization
+    start_cheat_caller_address(org_contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xorgmetadata";
+    dispatcher.setSponsorShipAddress(sponsor_contract_address);
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    stop_cheat_caller_address(org_contract_address);
+
+    //approve contract to spend token
+    let token_dispatcher = ERC20ABIDispatcher { contract_address: token_contract_address };
+    start_cheat_caller_address(token_contract_address, sponsor_address);
+    token_dispatcher.approve(sponsor_contract_address, amount);
+    stop_cheat_caller_address(token_contract_address);
+
+    let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
+    let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
+
+    // Sponsor the organization
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+    start_cheat_caller_address(org_contract_address, sponsor_address);
+    dispatcher.sponsor_organization(org_address, uri.clone(), amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify sponsorship balance updated
+    let org_balance = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance = token_dispatcher.balance_of(sponsor_contract_address);
+
+    assert(org_balance == amount, 'wrong Org sponsorship bal');
+    assert(sponsorship_contract_balance == amount, 'Wrong Sponsor contract bal');
+
+    start_cheat_caller_address(org_contract_address, org_address);
+    dispatcher.withdraw_sponsorship_fund(amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify balances after withdrawal
+    let org_balance_after = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance_after = token_dispatcher.balance_of(sponsor_contract_address);
+    assert(org_balance_after == 0, 'sponsor bal not updated');
+    assert(sponsorship_contract_balance_after == 0, 'wrong Sponsor contr bal');
+}
+
+#[test]
+#[should_panic(expected: "not an organization")]
+fn test_withdraw_sponsorship_fund_unauthorized_caller_should_panic() {
+    // Deploy NFT contract
+    let owner_address: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let sponsor_address: ContractAddress = contract_address_const::<'sponsor'>();
+    let unauthorized_caller: ContractAddress = contract_address_const::<'unauthorized_caller'>();
+
+    // deploy token
+    let initial_supply: u256 = 1_000_000_u256;
+    let contract_class = declare("ERC20").unwrap();
+
+    let mut constructor_args = ArrayTrait::new();
+    initial_supply.serialize(ref constructor_args);
+    sponsor_address.serialize(ref constructor_args);
+
+    let (token_contract_address, _) = contract_class.deploy(@constructor_args).unwrap();
+
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let org_contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_contract_address, sponsor_contract_addr,
+    );
+
+    //deploy sponsor contract
+    let event_contract_address = contract_address_const::<'event_contract_address'>();
+    let sponsor_contract_class = declare("AttenSysSponsor").unwrap();
+    let mut constructor_args = ArrayTrait::new();
+    org_contract_address.serialize(ref constructor_args);
+    event_contract_address.serialize(ref constructor_args);
+
+    let (sponsor_contract_address, _) = sponsor_contract_class.deploy(@constructor_args).unwrap();
+
+    let amount: u256 = 1000_u256;
+    let uri: ByteArray = "ipfs://sponsorship-proof";
+
+    // Setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address: org_contract_address };
+
+    // Create an organization
+    start_cheat_caller_address(org_contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xorgmetadata";
+    dispatcher.setSponsorShipAddress(sponsor_contract_address);
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    stop_cheat_caller_address(org_contract_address);
+
+    //approve contract to spend token
+    let token_dispatcher = ERC20ABIDispatcher { contract_address: token_contract_address };
+    start_cheat_caller_address(token_contract_address, sponsor_address);
+    token_dispatcher.approve(sponsor_contract_address, amount);
+    stop_cheat_caller_address(token_contract_address);
+
+    let allowance = token_dispatcher.allowance(sponsor_address, sponsor_contract_address);
+    let sponsor_bal = token_dispatcher.balance_of(sponsor_address);
+
+    // Sponsor the organization
+    let org = dispatcher.get_org_info(owner_address);
+    let org_address: ContractAddress = org.address_of_org;
+    start_cheat_caller_address(org_contract_address, sponsor_address);
+    dispatcher.sponsor_organization(org_address, uri.clone(), amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify sponsorship balance updated
+    let org_balance = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance = token_dispatcher.balance_of(sponsor_contract_address);
+
+    assert(org_balance == amount, 'wrong Org sponsorship bal');
+    assert(sponsorship_contract_balance == amount, 'Wrong Sponsor contract bal');
+
+    start_cheat_caller_address(org_contract_address, unauthorized_caller);
+    dispatcher.withdraw_sponsorship_fund(amount);
+    stop_cheat_caller_address(org_contract_address);
+
+    // Verify balances after withdrawal
+    let org_balance_after = dispatcher.get_org_sponsorship_balance(owner_address);
+    let sponsorship_contract_balance_after = token_dispatcher.balance_of(sponsor_contract_address);
+    assert(org_balance_after == 0, 'sponsor bal not updated');
+    assert(sponsorship_contract_balance_after == 0, 'wrong Sponsor contr bal');
+}
+#[test]
+fn test_transfer_org_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let admin: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    assert(dispatcher.get_admin() == admin, 'wrong admin');
+
+    start_cheat_caller_address(contract_address, admin);
+
+    dispatcher.transfer_admin(new_admin);
+    assert(dispatcher.get_new_admin() == new_admin, 'wrong intended admin');
+
+    stop_cheat_caller_address(contract_address)
+}
+
+#[test]
+fn test_claim_org_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let admin: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    assert(dispatcher.get_admin() == admin, 'wrong admin');
+
+    // Admin transfers admin rights to new_admin
+    start_cheat_caller_address(contract_address, admin);
+    dispatcher.transfer_admin(new_admin);
+    assert(dispatcher.get_new_admin() == new_admin, 'wrong intended admin');
+    stop_cheat_caller_address(contract_address);
+
+    // New admin claims admin rights
+    start_cheat_caller_address(contract_address, new_admin);
+    dispatcher.claim_admin_ownership();
+    assert(dispatcher.get_admin() == new_admin, 'admin claim failed');
+    assert(dispatcher.get_new_admin() == contract_address_const::<0>(), 'admin claim failed');
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+#[should_panic(expected: 'unauthorized caller')]
+fn test_transfer_org_admin_should_panic_for_wrong_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let invalid_admin: ContractAddress = contract_address_const::<'invalid_admin'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    // Wrong admin transfers admin rights to new_admin: should revert
+    start_cheat_caller_address(contract_address, invalid_admin);
+    dispatcher.transfer_admin(new_admin);
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+#[should_panic(expected: 'unauthorized caller')]
+fn test_claim_org_admin_should_panic_for_wrong_new_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let admin: ContractAddress = contract_address_const::<'contract_owner_address'>();
+    let new_admin: ContractAddress = contract_address_const::<'new_admin'>();
+    let wrong_new_admin: ContractAddress = contract_address_const::<'wrong_new_admin'>();
+    // setup dispatcher
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+
+    assert(dispatcher.get_admin() == admin, 'wrong admin');
+
+    // Admin transfers admin rights to new_admin
+    start_cheat_caller_address(contract_address, admin);
+    dispatcher.transfer_admin(new_admin);
+    stop_cheat_caller_address(contract_address);
+
+    // Wrong new admin claims admin rights: should panic
+    start_cheat_caller_address(contract_address, wrong_new_admin);
+    dispatcher.claim_admin_ownership();
+    stop_cheat_caller_address(contract_address);
+}
+
+////////////////////// Suspension Test Cases /////////////////////////////
+
+#[test]
+fn test_suspend_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+
+    let mut spy = spy_events();
+
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+
+    let org_name_copy = org_name.clone();
+    dispatcher.create_org_profile(org_name, org_ipfs_uri);
+
+    stop_cheat_caller_address(contract_address);
+    let contract_owner_address: ContractAddress = contract_address_const::<
+        'contract_owner_address',
+    >();
+
+    start_cheat_caller_address(contract_address, contract_owner_address);
+    dispatcher.suspend_organization(owner_address, true);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    Event::OrganizationSuspended(
+                        OrganizationSuspended {
+                            org_contract_address: owner_address,
+                            org_name: org_name_copy,
+                            suspended: true,
+                        },
+                    ),
+                ),
+            ],
+        );
+
+    /// assert the getter function return the correct state.
+    let is_suspended = dispatcher.is_org_suspended(owner_address);
+    assert_eq!(is_suspended, true);
+}
+
+#[test]
+fn test_unsuspend_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+
+    let mut spy = spy_events();
+
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+
+    let org_name_copy = org_name.clone();
+    dispatcher.create_org_profile(org_name, org_ipfs_uri);
+
+    stop_cheat_caller_address(contract_address);
+
+    let contract_owner_address: ContractAddress = contract_address_const::<
+        'contract_owner_address',
+    >();
+
+    start_cheat_caller_address(contract_address, contract_owner_address);
+    dispatcher.suspend_organization(owner_address, true);
+
+    /// assert the getter function return the correct state.
+    let is_suspended = dispatcher.is_org_suspended(owner_address);
+    assert_eq!(is_suspended, true);
+
+    dispatcher.suspend_organization(owner_address, false);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    Event::OrganizationSuspended(
+                        OrganizationSuspended {
+                            org_contract_address: owner_address,
+                            org_name: org_name_copy,
+                            suspended: false,
+                        },
+                    ),
+                ),
+            ],
+        );
+    /// assert the getter function return the correct state.
+    let is_suspended = dispatcher.is_org_suspended(owner_address);
+    assert_eq!(is_suspended, false);
+}
+#[test]
+#[should_panic(expected: 'Not admin')]
+fn test_suspend_org_panic() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+
+    let mut spy = spy_events();
+
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+
+    let org_name_copy = org_name.clone();
+    dispatcher.create_org_profile(org_name, org_ipfs_uri);
+
+    stop_cheat_caller_address(contract_address);
+    // non admin try to call suspenssion function
+    dispatcher.suspend_organization(owner_address, true);
+}
+
+#[test]
+fn test_suspend_bootcamp_for_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let mut spy = spy_events();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_name_cp = org_name.clone();
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let bootcamp_name_cp = bootcamp_name.clone();
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri_cp = bootcamp_ipfs_uri.clone();
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    let mut arr_of_instructors: Array<ContractAddress> = array![];
+    arr_of_instructors.append(instructor_address);
+    dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
+    let org = dispatcher.get_org_info(owner_address);
+    assert_eq!(org.number_of_instructors, 2);
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_cp = token_uri.clone();
+    let nft_name: ByteArray = "cairo";
+    let nft_name_cp = nft_name.clone();
+    let nft_symb: ByteArray = "CAO";
+    let nft_symb_cp = nft_symb.clone();
+
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
+        );
+    let updatedOrg = dispatcher.get_org_info(owner_address);
+    assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
+    assert_eq!(updatedOrg.number_of_all_classes, 3);
+    stop_cheat_caller_address(contract_address);
+
+    let contract_owner_address: ContractAddress = contract_address_const::<
+        'contract_owner_address',
+    >();
+
+    start_cheat_caller_address(contract_address, contract_owner_address);
+    // suspend bootcamp
+    dispatcher.suspend_org_bootcamp(owner_address, 0, true);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    Event::BootCampSuspended(
+                        BootCampSuspended {
+                            org_contract_address: owner_address,
+                            bootcamp_id: 0,
+                            bootcamp_name: bootcamp_name_cp,
+                            suspended: true,
+                        },
+                    ),
+                ),
+            ],
+        );
+    let is_suspended = dispatcher.is_bootcamp_suspended(owner_address, 0);
+    assert_eq!(is_suspended, true);
+}
+
+#[test]
+fn test_unsuspend_bootcamp_for_org() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let mut spy = spy_events();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_name_cp = org_name.clone();
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let bootcamp_name_cp = bootcamp_name.clone();
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri_cp = bootcamp_ipfs_uri.clone();
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    let mut arr_of_instructors: Array<ContractAddress> = array![];
+    arr_of_instructors.append(instructor_address);
+    dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
+    let org = dispatcher.get_org_info(owner_address);
+    assert_eq!(org.number_of_instructors, 2);
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_cp = token_uri.clone();
+    let nft_name: ByteArray = "cairo";
+    let nft_name_cp = nft_name.clone();
+    let nft_symb: ByteArray = "CAO";
+    let nft_symb_cp = nft_symb.clone();
+
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
+        );
+    let updatedOrg = dispatcher.get_org_info(owner_address);
+    assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
+    assert_eq!(updatedOrg.number_of_all_classes, 3);
+    stop_cheat_caller_address(contract_address);
+
+    let contract_owner_address: ContractAddress = contract_address_const::<
+        'contract_owner_address',
+    >();
+
+    start_cheat_caller_address(contract_address, contract_owner_address);
+    // suspend bootcamp
+    dispatcher.suspend_org_bootcamp(owner_address, 0, true);
+
+    let is_suspended = dispatcher.is_bootcamp_suspended(owner_address, 0);
+    assert_eq!(is_suspended, true);
+    // unsuspend bootcamp
+    dispatcher.suspend_org_bootcamp(owner_address, 0, false);
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    contract_address,
+                    Event::BootCampSuspended(
+                        BootCampSuspended {
+                            org_contract_address: owner_address,
+                            bootcamp_id: 0,
+                            bootcamp_name: bootcamp_name_cp,
+                            suspended: false,
+                        },
+                    ),
+                ),
+            ],
+        );
+    let is_suspended = dispatcher.is_bootcamp_suspended(owner_address, 0);
+    assert_eq!(is_suspended, false);
+}
+
+#[test]
+#[should_panic(expected: 'Not admin')]
+fn test_suspend_bootcamp_for_org_panic() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let token_addr = contract_address_const::<'new_owner'>();
+    let sponsor_contract_addr = contract_address_const::<'sponsor_contract_addr'>();
+    let contract_address = deploy_organization_contract(
+        "AttenSysOrg", hash, token_addr, sponsor_contract_addr,
+    );
+    let owner_address: ContractAddress = contract_address_const::<'owner'>();
+    let instructor_address: ContractAddress = contract_address_const::<'instructor'>();
+
+    let mut spy = spy_events();
+
+    let dispatcher = IAttenSysOrgDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner_address);
+    let org_name: ByteArray = "web3";
+    let org_name_cp = org_name.clone();
+    let bootcamp_name: ByteArray = "web3Bridge bootcamp";
+    let bootcamp_name_cp = bootcamp_name.clone();
+    let org_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri: ByteArray = "0xnsbsmmfbnakkdbbfjsgbdmmcjjmdnweb3";
+    let bootcamp_ipfs_uri_cp = bootcamp_ipfs_uri.clone();
+    dispatcher.create_org_profile(org_name.clone(), org_ipfs_uri);
+    let mut arr_of_instructors: Array<ContractAddress> = array![];
+    arr_of_instructors.append(instructor_address);
+    dispatcher.add_instructor_to_org(arr_of_instructors, org_name.clone());
+    let org = dispatcher.get_org_info(owner_address);
+    assert_eq!(org.number_of_instructors, 2);
+
+    let token_uri: ByteArray = "https://dummy_uri.com";
+    let token_uri_cp = token_uri.clone();
+    let nft_name: ByteArray = "cairo";
+    let nft_name_cp = nft_name.clone();
+    let nft_symb: ByteArray = "CAO";
+    let nft_symb_cp = nft_symb.clone();
+
+    dispatcher
+        .create_bootcamp(
+            org_name, bootcamp_name, token_uri, nft_name, nft_symb, 3, bootcamp_ipfs_uri,
+        );
+    let updatedOrg = dispatcher.get_org_info(owner_address);
+    assert_eq!(updatedOrg.number_of_all_bootcamps, 1);
+    assert_eq!(updatedOrg.number_of_all_classes, 3);
+    stop_cheat_caller_address(contract_address);
+
+    // non admin try to call suspenssion function
+    dispatcher.suspend_org_bootcamp(owner_address, 0, true);
+}

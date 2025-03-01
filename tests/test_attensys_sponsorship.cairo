@@ -1,12 +1,12 @@
 use starknet::{ContractAddress, contract_address_const, ClassHash, get_caller_address};
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global,
-    spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address
+    spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address,
 };
 
 use attendsys::contracts::AttenSysSponsor::{
     IAttenSysSponsorDispatcher, IAttenSysSponsorDispatcherTrait, IERC20Dispatcher,
-    IERC20DispatcherTrait
+    IERC20DispatcherTrait,
 };
 
 fn deploy(token: bool) -> (ContractAddress, ContractAddress) {
@@ -32,7 +32,7 @@ fn deploy(token: bool) -> (ContractAddress, ContractAddress) {
 fn deposit(
     token_contract_address: ContractAddress,
     sponsor_contract_address: ContractAddress,
-    caller: ContractAddress
+    caller: ContractAddress,
 ) {
     // set up the dispatcher for token contract
     //  address has to give approval to the sponsorship contract to spend his token
@@ -46,35 +46,38 @@ fn deposit(
     // set up the dispatcher for sponsor contract
     //  call the deposit function from the sponsor
     let sponsor_dispatcher = IAttenSysSponsorDispatcher {
-        contract_address: sponsor_contract_address
+        contract_address: sponsor_contract_address,
     };
 
     // interact with sponsor contract
     start_cheat_caller_address(sponsor_contract_address, caller);
     let sponsor_dispatcher = IAttenSysSponsorDispatcher {
-        contract_address: sponsor_contract_address
+        contract_address: sponsor_contract_address,
     };
-    sponsor_dispatcher.deposit(token_contract_address, 20000);
+    sponsor_dispatcher.deposit(caller, token_contract_address, 20000);
     stop_cheat_caller_address(sponsor_contract_address);
 
     assert(token_contract_dispatcher.balanceOf(caller) == 0, 'Deposit successful');
     assert(
+        
         token_contract_dispatcher.balanceOf(sponsor_contract_address) == 20000,
-        'Sponsorship updated'
+       
+        'Sponsorship updated',
+    
     );
 }
 
 fn withdraw(
     token_contract_address: ContractAddress,
     sponsor_contract_address: ContractAddress,
-    caller: ContractAddress
+    caller: ContractAddress,
 ) {
     // set up the dispatcher for token contract
     let token_contract_dispatcher = IERC20Dispatcher { contract_address: token_contract_address };
 
     // setup dispatcher for sponsor
     let sponsor_dispatcher = IAttenSysSponsorDispatcher {
-        contract_address: sponsor_contract_address
+        contract_address: sponsor_contract_address,
     };
 
     // test for withdrawal from the sponsorship contract
@@ -84,7 +87,9 @@ fn withdraw(
 
     assert(token_contract_dispatcher.balanceOf(caller) == 20000, 'Deposit successful');
     assert(
-        token_contract_dispatcher.balanceOf(sponsor_contract_address) == 0, 'Sponsorship updated'
+        
+        token_contract_dispatcher.balanceOf(sponsor_contract_address) == 0, 'Sponsorship updated',
+    
     );
 }
 

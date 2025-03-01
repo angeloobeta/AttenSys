@@ -5,5 +5,6 @@ pub mod contracts {
     pub mod AttenSysSponsor;
     pub mod AttenSysNft;
     pub mod AttenSysToken;
+    pub mod mock;
 }
 

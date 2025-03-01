@@ -1,10 +1,11 @@
 use starknet::{ContractAddress, contract_address_const, ClassHash};
+
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
 };
 
 use attendsys::contracts::AttenSysCourse::{
-    IAttenSysCourseDispatcher, IAttenSysCourseDispatcherTrait
+    IAttenSysCourseDispatcher, IAttenSysCourseDispatcherTrait,
 };
 
 fn deploy_contract(name: ByteArray, hash: ClassHash) -> ContractAddress {
@@ -81,7 +82,7 @@ fn test_claim_admin() {
     assert(attensys_course_contract.get_admin() == new_admin, 'admin claim failed');
     assert(
         attensys_course_contract.get_new_admin() == contract_address_const::<0>(),
-        'admin claim failed'
+        'admin claim failed',
     );
     stop_cheat_caller_address(contract_address);
 }
@@ -195,3 +196,64 @@ fn test_get_total_course_completions() {
 
     stop_cheat_caller_address(contract_address);
 }
+
+
+#[test]
+#[should_panic(expected: 'Not admin')]
+fn test_non_admin_cannot_suspend_or_unsuspend_course() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
+
+    let owner: ContractAddress = contract_address_const::<'owner'>();
+    let non_admin: ContractAddress = contract_address_const::<'student1'>();
+    let course_id: u256 = 1;
+    let base_uri: ByteArray = "https://example.com/";
+    let base_uri_2: ByteArray = "https://example.com/";
+    let name: ByteArray = "Test Course";
+    let symbol: ByteArray = "TC";
+
+    // Owner creates course
+    start_cheat_caller_address(contract_address, owner);
+    attensys_course_contract.create_course(owner, true, base_uri, name, symbol, base_uri_2);
+    stop_cheat_caller_address(contract_address);
+
+    // Non-admin tries to suspend
+    start_cheat_caller_address(contract_address, non_admin);
+
+    attensys_course_contract.toggle_suspension(course_id, true); // Should fail
+}
+
+#[test]
+fn test_toggle_suspension() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
+
+    let admin: ContractAddress = contract_address_const::<'admin'>();
+    let course_identifier: u256 = 1;
+    let base_uri: ByteArray = "https://example.com/";
+    let base_uri_2: ByteArray = "https://example.com/";
+    let name: ByteArray = "Test Course";
+    let symbol: ByteArray = "TC";
+
+    // Owner creates course
+    start_cheat_caller_address(contract_address, admin);
+    attensys_course_contract.create_course(admin, true, base_uri, name, symbol, base_uri_2);
+    // let current_suspension_status = attensys_course_contract.course_suspended.entry(1).read();
+
+    //newly created course.is_suspended should be false
+    assert(
+        attensys_course_contract.get_suspension_status(course_identifier) == false,
+        'course is suspended',
+    );
+    attensys_course_contract.toggle_suspension(course_identifier, true);
+    //course.is_suspended should be true after toggle
+    assert(
+        attensys_course_contract.get_suspension_status(course_identifier) == true,
+        'course is not suspended',
+    );
+
+    stop_cheat_caller_address(contract_address);
+}
+

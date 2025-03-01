@@ -10,14 +10,19 @@ pub trait IERC20<TContractState> {
     fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
     fn transferFrom(
-        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
     ) -> bool;
     fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
 }
 
 #[starknet::interface]
 pub trait IAttenSysSponsor<TContractState> {
-    fn deposit(ref self: TContractState, token_address: ContractAddress, amount: u256);
+    fn deposit(
+        ref self: TContractState,
+        sender: ContractAddress,
+        token_address: ContractAddress,
+        amount: u256,
+    );
     fn withdraw(ref self: TContractState, token_address: ContractAddress, amount: u256);
     fn get_contract_balance(self: @TContractState, token_address: ContractAddress) -> u256;
 }
@@ -42,7 +47,7 @@ pub mod AttenSysSponsor {
     #[derive(Drop, Debug, PartialEq, starknet::Event)]
     pub enum Event {
         SponsorDeposited: SponsorDeposited,
-        TokenWithdraw: TokenWithdraw
+        TokenWithdraw: TokenWithdraw,
     }
 
     #[derive(Drop, Debug, PartialEq, starknet::Event)]
@@ -61,7 +66,7 @@ pub mod AttenSysSponsor {
     fn constructor(
         ref self: ContractState,
         organization_contract_address: ContractAddress,
-        event_contract_address: ContractAddress
+        event_contract_address: ContractAddress,
     ) {
         assert(!organization_contract_address.is_zero(), 'zero address.');
         assert(!event_contract_address.is_zero(), 'zero address.');
@@ -72,22 +77,27 @@ pub mod AttenSysSponsor {
 
     #[abi(embed_v0)]
     impl AttenSysSponsorImpl of super::IAttenSysSponsor<ContractState> {
-        fn deposit(ref self: ContractState, token_address: ContractAddress, amount: u256) {
+        fn deposit(
+            ref self: ContractState,
+            sender: ContractAddress,
+            token_address: ContractAddress,
+            amount: u256,
+        ) {
             let caller = get_caller_address();
             assert(
                 caller == self.attenSysOrganization.read() || caller == self.attenSysEvent.read(),
-                'not an expected caller.'
+                'not an expected caller.',
             );
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             let has_transferred = token_dispatcher
-                .transferFrom(sender: caller, recipient: get_contract_address(), amount: amount);
+                .transferFrom(sender: sender, recipient: get_contract_address(), amount: amount);
 
             if has_transferred {
                 self
                     .emit(
                         Event::SponsorDeposited(
-                            SponsorDeposited { token: token_address, amount: amount }
-                        )
+                            SponsorDeposited { token: token_address, amount: amount },
+                        ),
                     );
                 self.balances.write(token_address, self.balances.read(token_address) + amount)
             }
@@ -97,7 +107,7 @@ pub mod AttenSysSponsor {
             let caller = get_caller_address();
             assert(
                 caller == self.attenSysOrganization.read() || caller == self.attenSysEvent.read(),
-                'not an expected caller.'
+                'not an expected caller.',
             );
             let contract_token_balance = self.balances.read(token_address);
             assert(amount <= contract_token_balance, 'Not enough balance');
@@ -108,8 +118,8 @@ pub mod AttenSysSponsor {
                 self
                     .emit(
                         Event::SponsorDeposited(
-                            SponsorDeposited { token: token_address, amount: amount }
-                        )
+                            SponsorDeposited { token: token_address, amount: amount },
+                        ),
                     );
                 self.balances.write(token_address, self.balances.read(token_address) - amount)
             }

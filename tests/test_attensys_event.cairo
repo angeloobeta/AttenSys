@@ -1,6 +1,7 @@
 use starknet::{ContractAddress, contract_address_const, ClassHash};
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, test_address
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
+    test_address,
 };
 
 use attendsys::contracts::AttenSysEvent::{IAttenSysEventDispatcher, IAttenSysEventDispatcherTrait};
@@ -39,7 +40,7 @@ fn deploy_event_contract(
     name: ByteArray,
     hash: ClassHash,
     _token_address: ContractAddress,
-    sponsor_contract_address: ContractAddress
+    sponsor_contract_address: ContractAddress,
 ) -> ContractAddress {
     let contract = declare(name).unwrap();
 
@@ -61,7 +62,7 @@ fn test_transfer_admin() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     // mock event with test addresses
     let contract_address = deploy_event_contract(
-        "AttenSysEvent", hash, test_address(), test_address()
+        "AttenSysEvent", hash, test_address(), test_address(),
     );
 
     let admin: ContractAddress = contract_address_const::<'admin'>();
@@ -84,7 +85,7 @@ fn test_claim_admin() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     // mock event with test addresses
     let contract_address = deploy_event_contract(
-        "AttenSysEvent", hash, test_address(), test_address()
+        "AttenSysEvent", hash, test_address(), test_address(),
     );
 
     let admin: ContractAddress = contract_address_const::<'admin'>();
@@ -106,7 +107,7 @@ fn test_claim_admin() {
     assert(attensys_course_contract.get_admin() == new_admin, 'admin claim failed');
     assert(
         attensys_course_contract.get_new_admin() == contract_address_const::<0>(),
-        'admin claim failed'
+        'admin claim failed',
     );
     stop_cheat_caller_address(contract_address);
 }
@@ -117,7 +118,7 @@ fn test_transfer_admin_should_panic_for_wrong_admin() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     // mock event with test addresses
     let contract_address = deploy_event_contract(
-        "AttenSysEvent", hash, test_address(), test_address()
+        "AttenSysEvent", hash, test_address(), test_address(),
     );
 
     let invalid_admin: ContractAddress = contract_address_const::<'invalid_admin'>();
@@ -137,7 +138,7 @@ fn test_claim_admin_should_panic_for_wrong_new_admin() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     // mock event with test addresses
     let contract_address = deploy_event_contract(
-        "AttenSysEvent", hash, test_address(), test_address()
+        "AttenSysEvent", hash, test_address(), test_address(),
     );
 
     let admin: ContractAddress = contract_address_const::<'admin'>();
@@ -157,4 +158,86 @@ fn test_claim_admin_should_panic_for_wrong_new_admin() {
     start_cheat_caller_address(contract_address, wrong_new_admin);
     attensys_course_contract.claim_admin_ownership();
     stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+fn test_toggle_event_status() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    // mock event with test addresses
+    let contract_address = deploy_event_contract(
+        "AttenSysEvent", hash, test_address(), test_address()
+    );
+
+    let admin: ContractAddress = contract_address_const::<'admin'>();
+    let attensys_event_contract = IAttenSysEventDispatcher { contract_address };
+
+    assert(attensys_event_contract.get_admin() == admin, 'wrong admin');
+
+    start_cheat_caller_address(contract_address, admin);
+
+    attensys_event_contract
+        .create_event(
+            test_address(),
+            "test_event",
+            "https://dummy_uri.com/your_id",
+            "Attensys",
+            "ATS",
+            1000,
+            2000,
+            true,
+            "https://dummy_event_uri.com/your_id"
+        );
+
+    let event_details = attensys_event_contract.get_event_details(1);
+    assert(event_details.is_suspended == false, 'event is suspended');
+    assert(attensys_event_contract.get_event_suspended_status(1) == false, 'event is suspended');
+
+    attensys_event_contract.toggle_event_suspended_status(1, true);
+    let event_details = attensys_event_contract.get_event_details(1);
+    assert(event_details.is_suspended == true, 'event is not suspended');
+    assert(attensys_event_contract.get_event_suspended_status(1) == true, 'event is not suspended');
+
+    attensys_event_contract.toggle_event_suspended_status(1, false);
+    let event_details = attensys_event_contract.get_event_details(1);
+    assert(event_details.is_suspended == false, 'event is suspended');
+    assert(attensys_event_contract.get_event_suspended_status(1) == false, 'event is suspended');
+
+    stop_cheat_caller_address(contract_address)
+}
+
+#[test]
+#[should_panic(expected: 'unauthorized caller')]
+fn test_toggle_event_should_panic_for_wrong_admin() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    // mock event with test addresses
+    let contract_address = deploy_event_contract(
+        "AttenSysEvent", hash, test_address(), test_address()
+    );
+
+    let other_admin: ContractAddress = contract_address_const::<'other_admin'>();
+    let attensys_event_contract = IAttenSysEventDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, other_admin);
+
+    attensys_event_contract
+        .create_event(
+            test_address(),
+            "test_event",
+            "https://dummy_uri.com/your_id",
+            "Attensys",
+            "ATS",
+            1000,
+            2000,
+            true,
+            "https://dummy_event_uri.com/your_id"
+        );
+
+    let event_details = attensys_event_contract.get_event_details(1);
+    assert(event_details.is_suspended == false, 'event is suspended');
+
+    attensys_event_contract.toggle_event_suspended_status(1, true);
+    let event_details = attensys_event_contract.get_event_details(1);
+    assert(event_details.is_suspended == true, 'event is not suspended');
+
+    stop_cheat_caller_address(contract_address)
 }

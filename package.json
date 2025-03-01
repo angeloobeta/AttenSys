@@ -9,7 +9,8 @@
   "scripts": {
     "chain": "starknet-devnet --seed 0 --account-class cairo1",
     "test": "snforge test",
-    "deploy": "ts-node scripts/deploy.ts"
+    "deploy": "ts-node scripts/deploy.ts",
+    "mainnet-deploy": "ts-node scripts/mainnet-deploy.ts"
   },
   "author": "",
   "license": "ISC",
@@ -19,6 +20,7 @@
     "fs": "^0.0.1-security",
     "path": "^0.12.7",
     "prettier": "^3.3.3",
-    "starknet": "^6.11.0"
+    "starknet": "^6.11.0",
+    "starknet-devnet": "^0.2.2"
   }
 }
