@@ -2,11 +2,7 @@ use starknet::{ContractAddress, contract_address_const, ClassHash};
 // get_caller_address,
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, start_cheat_block_timestamp_global,
-<<<<<<< HEAD
-    spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address
-=======
     spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address,
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
 };
 
 
@@ -25,12 +21,8 @@ use attendsys::contracts::AttenSysOrg::IAttenSysOrgDispatcherTrait;
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{Event};
 use attendsys::contracts::AttenSysOrg::AttenSysOrg::{
     OrganizationProfile, InstructorAddedToOrg, InstructorRemovedFromOrg, BootCampCreated,
-<<<<<<< HEAD
-    ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved, RegistrationDeclined
-=======
     ActiveMeetLinkAdded, BootcampRegistration, RegistrationApproved, RegistrationDeclined,
     OrganizationSuspended, BootCampSuspended,
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
 };
 // use attendsys::contracts::AttenSysSponsor:: { AttenSysSponsor, IAttenSysSponsorDispatcher };
 // use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
@@ -215,19 +207,11 @@ fn test_create_course() {
                             base_uri: token_uri_a.clone(),
                             name_: nft_name_a,
                             symbol: nft_symb_a,
-<<<<<<< HEAD
-                            course_ipfs_uri: token_uri_a.clone()
-                        }
-                    )
-                )
-            ]
-=======
                             course_ipfs_uri: token_uri_a.clone(),
                         },
                     ),
                 ),
             ],
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
         );
     dispatcher
         .create_course(
@@ -236,11 +220,7 @@ fn test_create_course() {
             token_uri_b.clone(),
             nft_name_b.clone(),
             nft_symb_b.clone(),
-<<<<<<< HEAD
-            token_uri_b_2.clone()
-=======
             token_uri_b_2.clone(),
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
         );
     dispatcher
         .create_course(owner_address, true, token_uri_b, nft_name_b, nft_symb_b, token_uri_b_2);
@@ -896,11 +876,7 @@ fn test_register_for_bootcamp() {
     dispatcher.register_for_bootcamp(org_address, 0, token_uri_clone);
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-<<<<<<< HEAD
-    let status:u8 = *all_request[0].status;
-=======
     let status: u8 = *all_request[0].status;
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
     assert(status == 0, 'not pending');
 
     spy
@@ -909,17 +885,10 @@ fn test_register_for_bootcamp() {
                 (
                     contract_address,
                     Event::BootcampRegistration(
-<<<<<<< HEAD
-                        BootcampRegistration { org_address: org_address_cp, bootcamp_id: 0 }
-                    )
-                )
-            ]
-=======
                         BootcampRegistration { org_address: org_address_cp, bootcamp_id: 0 },
                     ),
                 ),
             ],
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
         )
 }
 
@@ -975,11 +944,7 @@ fn test_approve_registration() {
     assert(updated_org_num_of_students == 1, 'inaccurate num of students');
 
     let all_request = dispatcher.get_all_registration_request(owner_address);
-<<<<<<< HEAD
-    let status:u8 = *all_request[0].status;
-=======
     let status: u8 = *all_request[0].status;
->>>>>>> 373aaf44dfd19bb648eae82f2959d91a338a2d12
     assert(status == 1, 'not approved');
 
     spy
@@ -998,7 +963,7 @@ fn test_approve_registration() {
 }
 
 #[test]
-fn test_decline_registration() {
+fn test_decline_registration2() {
     //set required addreses
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
     let token_addr = contract_address_const::<'new_owner'>();

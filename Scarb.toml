@@ -18,6 +18,3 @@ casm = true
 
 [scripts]
 test = "snforge test"
-
-[profile.default]
-rpc_url = "https://starknet-mainnet.public.blastapi.io"

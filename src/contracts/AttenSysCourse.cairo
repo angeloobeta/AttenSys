@@ -211,6 +211,15 @@ pub mod AttenSysCourse {
                 is_suspended: false,
             };
 
+            self.all_course_info.append().write(Course {
+                owner: owner_,
+                course_identifier: current_identifier,
+                accessment: accessment_,
+                uri: empty_uri,
+                course_ipfs_uri: course_ipfs_uri.clone(),
+                is_suspended: false,
+            });
+
             self
                 .creator_to_all_content
                 .entry(owner_)
@@ -252,6 +261,7 @@ pub mod AttenSysCourse {
                 .course_nft_contract_address
                 .entry(current_identifier)
                 .write(deployed_contract_address);
+            
 
             self
                 .emit(
