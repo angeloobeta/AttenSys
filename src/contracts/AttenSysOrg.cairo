@@ -50,9 +50,10 @@ pub trait IAttenSysOrg<TContractState> {
     fn batch_certify_students(
         ref self: TContractState,
         org_: ContractAddress,
-        class_id: u64,
-        students: Array<ContractAddress>,
+        bootcamp_id: u64,
     );
+    fn single_certify_student(ref self : TContractState,  org_: ContractAddress,
+        bootcamp_id: u64, students: ContractAddress );
     fn setSponsorShipAddress(ref self: TContractState, sponsor_contract_address: ContractAddress);
     fn sponsor_organization(
         ref self: TContractState, organization: ContractAddress, uri: ByteArray, amt: u256,
@@ -111,6 +112,8 @@ pub trait IAttenSysOrg<TContractState> {
     fn get_specific_organization_registered_bootcamp(self: @TContractState, org: ContractAddress, student: ContractAddress) -> Array<AttenSysOrg::RegisteredBootcamp>;
     fn get_class_attendance_status(self: @TContractState,org: ContractAddress, bootcamp_id : u64, class_id: u64,student: ContractAddress)-> bool;
     fn get_all_bootcamp_classes (self: @TContractState, org: ContractAddress, bootcamp_id : u64) -> Array<u64>;
+    fn get_certified_student_bootcamp_address (self: @TContractState, org: ContractAddress, bootcamp_id : u64) -> Array<ContractAddress>; 
+    fn get_bootcamp_certification_status(self: @TContractState, org: ContractAddress, bootcamp_id : u64, student: ContractAddress )->bool;
 }
 
 // Events
@@ -165,7 +168,7 @@ pub mod AttenSysOrg {
         //saves attendance status of students
         inst_student_status: Map<ContractAddress, Map<ContractAddress, bool>>,
         //cerified course, student ---> true
-        certify_student: Map::<(u64, ContractAddress), bool>,
+        certify_student: Map::<(ContractAddress, u64, ContractAddress), bool>,
         //nft classhash
         hash: ClassHash,
         // the currency used on the platform
@@ -188,6 +191,8 @@ pub mod AttenSysOrg {
         student_address_to_specific_bootcamp: Map::<(ContractAddress, ContractAddress), Vec<RegisteredBootcamp>>,
         //maps org to bootcamp to classID
         bootcamp_class_data_id : Map::<(ContractAddress, u64), Vec<u64>>,
+        //saves all certifed student for each bootcamp
+        certified_students_for_bootcamp: Map::<(ContractAddress, u64), Vec<ContractAddress>>,
     }
 
     //find a way to keep track of all course identifiers for each owner.
@@ -943,33 +948,53 @@ pub mod AttenSysOrg {
         fn batch_certify_students(
             ref self: ContractState,
             org_: ContractAddress,
-            class_id: u64,
-            students: Array<ContractAddress>,
+            bootcamp_id: u64,
         ) {
             //only instructor under an organization issues certificate
             //all of the registered students with attendance
             let caller = get_caller_address();
             let is_instructor = self.instructor_part_of_org.entry((org_, caller)).read();
-            let num_of_reg_student = self
-                .org_instructor_classes
-                .entry((org_, caller))
-                .at(class_id)
-                .read()
-                .num_of_reg_students;
+            let mut attendance_counter = 0;
             assert(is_instructor, 'not an instructor');
-            if num_of_reg_student > 0 {
-                for i in 0..num_of_reg_student {
-                    if self.inst_student_status.entry(caller).entry(*students.at(i)).read() {
-                        self.certify_student.entry((class_id, *students.at(i))).write(true);
-                    }
+            
+            let mut arr_of_request = array![];
+            for i in 0..self.org_to_requests.entry(org_).len() {      
+                if self.org_to_requests.entry(org_).at(i).status.read() == 1 {
+                    arr_of_request.append(self.org_to_requests.entry(org_).at(i).address_of_student.read());
                 }
-            }
+            };      
+            let mut class_id_arr = array![];
+            for i in 0..self.bootcamp_class_data_id.entry((org_,bootcamp_id)).len() {
+                class_id_arr.append(self.bootcamp_class_data_id.entry((org_,bootcamp_id)).at(i).read());
+            };
+//@todo mint an nft associated to the bootcamp to each student.
+                for i in 0..arr_of_request.len() {   
+                        for k in 0..class_id_arr.len(){
+                            let reg_status = self.student_attendance_status.entry((org_, bootcamp_id, *class_id_arr.at(k), *arr_of_request.at(i))).read();
+                            if reg_status {
+                                attendance_counter += 1;
+                            }
+                        };    
+                        let attendance_criteria = class_id_arr.len() * (1/2);
+                        if attendance_counter > attendance_criteria {
+                            self.certify_student.entry((org_, bootcamp_id, *arr_of_request.at(i))).write(true);
+                            self.certified_students_for_bootcamp.entry((org_, bootcamp_id)).append().write(*arr_of_request.at(i));
+                            attendance_counter = 0;
+                        };
+                };
             self
                 .emit(
                     StudentsCertified {
-                        org_address: org_, class_id: class_id, student_addresses: students,
+                        org_address: org_, class_id: bootcamp_id, student_addresses: arr_of_request,
                     },
                 )
+        }
+        fn single_certify_student(ref self : ContractState,  org_: ContractAddress, bootcamp_id: u64, students: ContractAddress ){
+            let caller = get_caller_address();
+            let is_instructor = self.instructor_part_of_org.entry((org_, caller)).read();
+            assert(is_instructor, 'not an instructor');
+            self.certify_student.entry((org_, bootcamp_id, students)).write(true); 
+            self.certified_students_for_bootcamp.entry((org_, bootcamp_id)).append().write(students);
         }
 
         fn setSponsorShipAddress(
@@ -1320,6 +1345,18 @@ pub mod AttenSysOrg {
             };
             arr
         }
+        fn get_certified_student_bootcamp_address(self: @ContractState, org: ContractAddress, bootcamp_id : u64) -> Array<ContractAddress>{
+            let mut arr = array![];
+                for i in 0..self.certified_students_for_bootcamp.entry((org, bootcamp_id)).len(){
+                    arr.append(self.certified_students_for_bootcamp.entry((org, bootcamp_id)).at(i).read());
+                };
+           arr
+        }
+        fn get_bootcamp_certification_status(self: @ContractState, org: ContractAddress, bootcamp_id : u64, student: ContractAddress )->bool{
+            self.certify_student.entry((org, bootcamp_id, student)).read()
+        }
+
+
     }
 
     fn create_a_class(

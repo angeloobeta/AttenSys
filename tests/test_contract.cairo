@@ -958,6 +958,13 @@ fn test_approve_registration() {
     stop_cheat_caller_address(contract_address);
     let attendance_status = dispatcher.get_class_attendance_status(owner_address,0,0,student_address);
     assert(attendance_status, 'not marked');
+
+    start_cheat_caller_address(contract_address, owner_address);
+    dispatcher.batch_certify_students(owner_address,0);
+    let certify_length = dispatcher.get_certified_student_bootcamp_address(owner_address,0);
+    assert(certify_length.len() == 1, 'incorrect array len');
+    let get_cert_stat = dispatcher.get_bootcamp_certification_status(owner_address,0,student_address);
+    assert(get_cert_stat, 'incorrect status');
     spy
         .assert_emitted(
             @array![
