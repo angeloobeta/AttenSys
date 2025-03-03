@@ -1033,6 +1033,7 @@ pub mod AttenSysOrg {
 
         fn withdraw_sponsorship_fund(ref self: ContractState, amt: u256) {
             let organization = get_caller_address();
+            assert(amt > 0, 'Invalid withdrawal amount');
             let status: bool = self.created_status.entry(organization).read();
             if (status) {
                 assert(
