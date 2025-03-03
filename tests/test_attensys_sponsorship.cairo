@@ -59,8 +59,11 @@ fn deposit(
 
     assert(token_contract_dispatcher.balanceOf(caller) == 0, 'Deposit successful');
     assert(
+        
         token_contract_dispatcher.balanceOf(sponsor_contract_address) == 20000,
+       
         'Sponsorship updated',
+    
     );
 }
 
@@ -84,7 +87,9 @@ fn withdraw(
 
     assert(token_contract_dispatcher.balanceOf(caller) == 20000, 'Deposit successful');
     assert(
+        
         token_contract_dispatcher.balanceOf(sponsor_contract_address) == 0, 'Sponsorship updated',
+    
     );
 }
 

@@ -1,0 +1,6 @@
+Course Class hash declared:
+0x0773da0bd4ee2fad68a6b49e1bdeafa7967c479185101876572c181124a22060
+
+NFT Class hash declared:0x01afed33f3c6efab13feb1b13ec9c1d3cf05c77fabf6577bea21911b7b8bb889
+
+Event Class hash declared: 0x043ab3bd12700ba3a66b6a0489cf5b9f5edb06605bce972e4c4bc40bcbb79381
