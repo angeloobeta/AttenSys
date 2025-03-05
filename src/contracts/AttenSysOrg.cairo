@@ -993,6 +993,8 @@ pub mod AttenSysOrg {
             let caller = get_caller_address();
             let is_instructor = self.instructor_part_of_org.entry((org_, caller)).read();
             assert(is_instructor, 'not an instructor');
+            //@todo check if student has been certified
+            //@todo check if address is a registered student
             self.certify_student.entry((org_, bootcamp_id, students)).write(true); 
             self.certified_students_for_bootcamp.entry((org_, bootcamp_id)).append().write(students);
         }
