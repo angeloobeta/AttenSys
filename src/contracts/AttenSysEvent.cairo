@@ -148,7 +148,10 @@ mod AttenSysEvent {
     #[derive(Drop, Clone, Serde, starknet::Store)]
     pub struct UserAttendedEventStruct {
         pub event_name: ByteArray,
-        pub time: u256,
+        pub time: Time,
+        pub event_organizer: ContractAddress,
+        pub event_id : u256,
+        pub event_uri: ByteArray,
     }
 
     #[event]
@@ -441,7 +444,7 @@ mod AttenSysEvent {
                 .append()
                 .write(get_caller_address());
             let call_data = UserAttendedEventStruct {
-                event_name: event_details.event_name, time: event_details.time.start_time,
+                event_name: event_details.event_name, time: event_details.time, event_organizer: event_details.event_organizer, event_id : event_details.event_id, event_uri: event_details.event_uri   
             };
             self.all_attended_event.entry(get_caller_address()).append().write(call_data);
 
@@ -485,7 +488,7 @@ mod AttenSysEvent {
                 }
             }
             let call_data = UserAttendedEventStruct {
-                event_name: event_details.event_name, time: event_details.time.start_time,
+                event_name: event_details.event_name, time: event_details.time, event_organizer: event_details.event_organizer, event_id : event_details.event_id, event_uri: event_details.event_uri
             };
             self.all_registered_event_by_user.entry(get_caller_address()).append().write(call_data);
             self.attendees_registered_for_event_with_identifier.entry(event_identifier).append().write(get_caller_address());
