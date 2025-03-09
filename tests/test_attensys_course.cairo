@@ -162,6 +162,31 @@ fn test_check_course_completion_status() {
     stop_cheat_caller_address(contract_address);
 }
 
+
+#[test]
+#[should_panic(expected: 'already acquired')]
+fn test_acquire_a_course() {
+    let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");
+    let contract_address = deploy_contract("AttenSysCourse", hash);
+    let attensys_course_contract = IAttenSysCourseDispatcher { contract_address };
+
+    let owner: ContractAddress = contract_address_const::<'owner'>();
+    let student: ContractAddress = contract_address_const::<'student'>();
+    let base_uri: ByteArray = "https://example.com/";
+    let base_uri_2: ByteArray = "https://example.com/";
+    let name: ByteArray = "Test Course";
+    let symbol: ByteArray = "TC";
+
+    start_cheat_caller_address(contract_address, owner);
+    attensys_course_contract.create_course(owner, true, base_uri, name, symbol, base_uri_2);
+    stop_cheat_caller_address(contract_address);
+
+    start_cheat_caller_address(contract_address, student);
+    attensys_course_contract.acquire_a_course(0);
+    attensys_course_contract.acquire_a_course(0);
+    stop_cheat_caller_address(contract_address);
+}
+
 #[test]
 fn test_get_total_course_completions() {
     let (_nft_contract_address, hash) = deploy_nft_contract("AttenSysNft");

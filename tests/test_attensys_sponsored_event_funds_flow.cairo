@@ -4,9 +4,7 @@ use snforge_std::{
     spy_events, EventSpyAssertionsTrait, stop_cheat_caller_address
 };
 
-use attendsys::contracts::AttenSysEvent::{
-    IAttenSysEventDispatcher, IAttenSysEventDispatcherTrait
-};
+use attendsys::contracts::AttenSysEvent::{IAttenSysEventDispatcher, IAttenSysEventDispatcherTrait};
 use attendsys::contracts::AttenSysToken;
 use attendsys::contracts::AttenSysSponsor::{
     IAttenSysSponsorDispatcher, IAttenSysSponsorDispatcherTrait
@@ -125,21 +123,22 @@ fn test_successful_sponsor_event_flow() {
     let created_event_address: ContractAddress = created_event.event_organizer;
 
     // Confirm event sponsorship balance is initially empty
-    let initial_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let initial_event_balance = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     assert(initial_event_balance == 0, 'Wrong event balance');
-
 
     start_cheat_caller_address(event_contract_address, sponsor_address);
     event_dispatcher.sponsor_event(1, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
-      
+
     // Check event balance was updated
-    let latest_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let latest_event_balance = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     assert(latest_event_balance == sponsor_amount, 'Wrong event balance');
-    
+
     // Check tokens were transferred to sponsorhip contract
     let sponsor_balance = token_dispatcher.balanceOf(sponsor_contract_address);
-    assert!(sponsor_balance == sponsor_amount, "Inaccurate sponsor balance");  
+    assert!(sponsor_balance == sponsor_amount, "Inaccurate sponsor balance");
 }
 
 #[test]
@@ -211,18 +210,19 @@ fn test_successful_withdrawal_by_event_creator() {
     let created_event_address: ContractAddress = created_event.event_organizer;
 
     // Confirm event sponsorship balance is initially empty
-    let initial_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let initial_event_balance = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     assert(initial_event_balance == 0, 'Wrong event balance');
-
 
     start_cheat_caller_address(event_contract_address, sponsor_address);
     event_dispatcher.sponsor_event(1, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
-      
+
     // Check event balance was updated
-    let latest_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let latest_event_balance = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     assert(latest_event_balance == sponsor_amount, 'Wrong event balance');
-    
+
     // Check tokens were transferred to sponsorhip contract
     let sponsor_balance = token_dispatcher.balanceOf(sponsor_contract_address);
     assert!(sponsor_balance == sponsor_amount, "Inaccurate sponsor balance");
@@ -232,7 +232,8 @@ fn test_successful_withdrawal_by_event_creator() {
     stop_cheat_caller_address(event_contract_address);
 
     // Check balances after successful withdrawal
-    let event_balance_withdrawn = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let event_balance_withdrawn = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     let sponsorship_contract_withdrawn = token_dispatcher.balanceOf(sponsor_contract_address);
     assert(event_balance_withdrawn == 0, 'Wrong event balance withdrawn');
     assert(sponsorship_contract_withdrawn == 0, 'Wrong sponsor balance');
@@ -309,18 +310,19 @@ fn test_unauthorized_event_withdrawal() {
     let created_event_address: ContractAddress = created_event.event_organizer;
 
     // Confirm event sponsorship balance is initially empty
-    let initial_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let initial_event_balance = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     assert(initial_event_balance == 0, 'Wrong event balance');
-
 
     start_cheat_caller_address(event_contract_address, sponsor_address);
     event_dispatcher.sponsor_event(1, sponsor_amount, sponsor_uri.clone());
     stop_cheat_caller_address(event_contract_address);
-      
+
     // Check event balance was updated
-    let latest_event_balance = event_dispatcher.get_event_sponsorship_balance(created_event_address);
+    let latest_event_balance = event_dispatcher
+        .get_event_sponsorship_balance(created_event_address);
     assert(latest_event_balance == sponsor_amount, 'Wrong event balance');
-    
+
     // Check tokens were transferred to sponsorhip contract
     let sponsor_balance = token_dispatcher.balanceOf(sponsor_contract_address);
     assert!(sponsor_balance == sponsor_amount, "Inaccurate sponsor balance");
