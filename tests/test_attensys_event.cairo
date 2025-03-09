@@ -185,7 +185,8 @@ fn test_toggle_event_status() {
             1000,
             2000,
             true,
-            "https://dummy_event_uri.com/your_id"
+            "https://dummy_event_uri.com/your_id",
+            0
         );
 
     let event_details = attensys_event_contract.get_event_details(1);
@@ -229,7 +230,8 @@ fn test_toggle_event_should_panic_for_wrong_admin() {
             1000,
             2000,
             true,
-            "https://dummy_event_uri.com/your_id"
+            "https://dummy_event_uri.com/your_id",
+            0
         );
 
     let event_details = attensys_event_contract.get_event_details(1);

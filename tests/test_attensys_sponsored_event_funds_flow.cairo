@@ -108,7 +108,8 @@ fn test_successful_sponsor_event_flow() {
             2238493,
             32989989,
             true,
-            event_ipfs_uri.clone()
+            event_ipfs_uri.clone(),
+            0
         );
     stop_cheat_caller_address(event_contract_address);
 
@@ -195,7 +196,8 @@ fn test_successful_withdrawal_by_event_creator() {
             2238493,
             32989989,
             true,
-            event_ipfs_uri.clone()
+            event_ipfs_uri.clone(),
+            0
         );
     stop_cheat_caller_address(event_contract_address);
 
@@ -295,7 +297,8 @@ fn test_unauthorized_event_withdrawal() {
             2238493,
             32989989,
             true,
-            event_ipfs_uri.clone()
+            event_ipfs_uri.clone(),
+            0
         );
     stop_cheat_caller_address(event_contract_address);
 

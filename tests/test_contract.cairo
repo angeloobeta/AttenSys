@@ -407,6 +407,7 @@ fn test_create_event() {
             32989989,
             true,
             event_uri.clone(),
+            0
         );
     let event_details_check = dispatcher.get_event_details(1);
     //println!("Event URI: {:?}", event_details_check.event_uri);
@@ -437,6 +438,7 @@ fn test_create_event() {
             32989989,
             true,
             event_uri_two.clone(),
+            0
         );
 
     let event_details_check_two = dispatcher.get_event_details(2);
@@ -463,6 +465,7 @@ fn test_create_event() {
             32989989,
             true,
             event_uri_3.clone(),
+            1,
         );
 
     let event_details_check_three = dispatcher.get_event_details(3);
@@ -502,22 +505,23 @@ fn test_reg_nd_mark() {
             329,
             true,
             event_uri,
+            0
         );
 
     start_cheat_block_timestamp_global(55555);
     start_cheat_caller_address(contract_address, attendee1_address);
     dispatcher.register_for_event(1);
-    dispatcher.mark_attendance(1);
+    dispatcher.mark_attendance(1,attendee1_address);
     let all_events = dispatcher.get_all_attended_events(attendee1_address);
     assert(all_events.len() == 1, 'wrong length');
 
     start_cheat_caller_address(contract_address, attendee2_address);
     dispatcher.register_for_event(1);
-    dispatcher.mark_attendance(1);
+    dispatcher.mark_attendance(1, attendee2_address);
 
     start_cheat_caller_address(contract_address, attendee3_address);
     dispatcher.register_for_event(1);
-    dispatcher.mark_attendance(1);
+    dispatcher.mark_attendance(1, attendee3_address);
 
     start_cheat_caller_address(contract_address, owner_address);
     dispatcher.batch_certify_attendees(1);
