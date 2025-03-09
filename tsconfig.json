@@ -1,12 +1,11 @@
-  {
-    "compilerOptions": {
-      "moduleResolution": "nodenext", 
-      "module": "NodeNext",
-      "target": "ES6",
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "strict": true
-    },
-    "include": ["scripts/**/*.ts", "scripts/deploy.ts"]
-  }
-  
+{
+  "compilerOptions": {
+    "moduleResolution": "nodenext",
+    "module": "NodeNext",
+    "target": "ES6",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "include": ["scripts/**/*.ts", "scripts/deploy.ts"]
+}

@@ -12,7 +12,7 @@ pub trait IAttenSysCourse<TContractState> {
         name_: ByteArray,
         symbol: ByteArray,
         course_ipfs_uri: ByteArray,
-    ) -> ContractAddress;
+    ) -> (ContractAddress, u256);
     fn add_replace_course_content(
         ref self: TContractState,
         course_identifier: u256,
@@ -20,6 +20,7 @@ pub trait IAttenSysCourse<TContractState> {
         new_course_uri_a: felt252,
         new_course_uri_b: felt252,
     );
+    fn acquire_a_course(ref self: TContractState, course_identifier: u256);
     //untested
     fn finish_course_claim_certification(ref self: TContractState, course_identifier: u256);
     //untested
@@ -29,7 +30,9 @@ pub trait IAttenSysCourse<TContractState> {
     fn get_course_infos(
         self: @TContractState, course_identifiers: Array<u256>,
     ) -> Array<AttenSysCourse::Course>;
-    //untested
+    fn get_all_taken_courses(
+        self: @TContractState, user: ContractAddress
+    ) -> Array<AttenSysCourse::Course>;
     fn get_user_completed_courses(self: @TContractState, user: ContractAddress) -> Array<u256>;
     fn get_all_courses_info(self: @TContractState) -> Array<AttenSysCourse::Course>;
     fn get_all_creator_courses(
@@ -145,6 +148,10 @@ pub mod AttenSysCourse {
         course_nft_contract_address: Map::<u256, ContractAddress>,
         //tracks all minted nft id minted by events
         track_minted_nft_id: Map::<(u256, ContractAddress), u256>,
+        // user to courses
+        user_courses: Map::<ContractAddress, Vec<Course>>,
+        // user_to_course_status to prevent more than once
+        user_to_course_status: Map::<(ContractAddress, u256), bool>
     }
     //find a way to keep track of all course identifiers for each owner.
     #[derive(Drop, Serde, starknet::Store)]
@@ -188,7 +195,7 @@ pub mod AttenSysCourse {
             name_: ByteArray,
             symbol: ByteArray,
             course_ipfs_uri: ByteArray,
-        ) -> ContractAddress {
+        ) -> (ContractAddress, u256) {
             //make an address zero check
             let identifier_count = self.identifier_tracker.read();
             let current_identifier = identifier_count + 1;
@@ -211,14 +218,19 @@ pub mod AttenSysCourse {
                 is_suspended: false,
             };
 
-            self.all_course_info.append().write(Course {
-                owner: owner_,
-                course_identifier: current_identifier,
-                accessment: accessment_,
-                uri: empty_uri,
-                course_ipfs_uri: course_ipfs_uri.clone(),
-                is_suspended: false,
-            });
+            self
+                .all_course_info
+                .append()
+                .write(
+                    Course {
+                        owner: owner_,
+                        course_identifier: current_identifier,
+                        accessment: accessment_,
+                        uri: empty_uri,
+                        course_ipfs_uri: course_ipfs_uri.clone(),
+                        is_suspended: false,
+                    }
+                );
 
             self
                 .creator_to_all_content
@@ -261,7 +273,6 @@ pub mod AttenSysCourse {
                 .course_nft_contract_address
                 .entry(current_identifier)
                 .write(deployed_contract_address);
-            
 
             self
                 .emit(
@@ -275,7 +286,32 @@ pub mod AttenSysCourse {
                         course_ipfs_uri: course_ipfs_uri,
                     },
                 );
-            deployed_contract_address
+            (deployed_contract_address, current_identifier)
+        }
+
+        fn acquire_a_course(ref self: ContractState, course_identifier: u256) {
+            let caller = get_caller_address();
+            assert(!self.user_to_course_status.entry((caller, course_identifier)).read(), 'already acquired');
+            self.user_to_course_status.entry((caller, course_identifier)).write(true);
+            let derived_course = self
+                .specific_course_info_with_identifer
+                .entry(course_identifier)
+                .read();
+            self.user_courses.entry(caller).append().write(derived_course);
+        }
+
+
+        fn get_all_taken_courses(self: @ContractState, user: ContractAddress) -> Array<Course> {
+            let mut course_info_list = array![];
+            for i in 0
+                ..self
+                    .user_courses
+                    .entry(user)
+                    .len() {
+                        course_info_list.append(self.user_courses.entry(user).at(i).read())
+                    };
+
+            course_info_list
         }
 
 
@@ -310,13 +346,20 @@ pub mod AttenSysCourse {
             if self.all_course_info.len() == 0 {
                 self.all_course_info.append().write(current_course_info.clone());
             } else {
-                for i in 0..self.all_course_info.len() {
-                    if self.all_course_info.at(i).read().course_identifier == course_identifier {
-                        self.all_course_info.at(i).uri.write(call_data);
-                    } else {
-                        self.all_course_info.append().write(current_course_info.clone());
-                    }
-                };
+                for i in 0
+                    ..self
+                        .all_course_info
+                        .len() {
+                            if self
+                                .all_course_info
+                                .at(i)
+                                .read()
+                                .course_identifier == course_identifier {
+                                self.all_course_info.at(i).uri.write(call_data);
+                            } else {
+                                self.all_course_info.append().write(current_course_info.clone());
+                            }
+                        };
             };
             //run a loop to update the creator content storage data
             let mut i: u64 = 0;
@@ -414,9 +457,10 @@ pub mod AttenSysCourse {
 
         fn get_all_courses_info(self: @ContractState) -> Array<Course> {
             let mut arr = array![];
-            for i in 0..self.all_course_info.len() {
-                arr.append(self.all_course_info.at(i).read());
-            };
+            for i in 0
+                ..self.all_course_info.len() {
+                    arr.append(self.all_course_info.at(i).read());
+                };
             arr
         }
 
