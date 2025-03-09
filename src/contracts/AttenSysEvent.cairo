@@ -45,9 +45,13 @@ pub trait IAttenSysEvent<TContractState> {
     fn get_new_admin(self: @TContractState) -> ContractAddress;
     fn sponsor_event(ref self: TContractState, event_identifier: u256, amt: u256, uri: ByteArray);
     fn withdraw_sponsorship_funds(ref self: TContractState, amt: u256);
-    fn set_sponsorship_contract(ref self: TContractState, sponsor_contract_address: ContractAddress);
+    fn set_sponsorship_contract(
+        ref self: TContractState, sponsor_contract_address: ContractAddress
+    );
     fn get_event_sponsorship_balance(self: @TContractState, event: ContractAddress) -> u256;
-    fn toggle_event_suspended_status(ref self: TContractState, event_identifier: u256, status: bool);
+    fn toggle_event_suspended_status(
+        ref self: TContractState, event_identifier: u256, status: bool
+    );
     fn get_event_suspended_status(self: @TContractState, event_identifier: u256) -> bool;
     fn get_all_attendace_marked(self: @TContractState, event_identifier : u256) -> Array<ContractAddress>;
     fn cancel_event(ref self: TContractState, event_identifier: u256);
@@ -353,7 +357,9 @@ mod AttenSysEvent {
 
         fn end_event(ref self: ContractState, event_identifier: u256) {
             //only event owner
-            assert(self.get_event_suspended_status(event_identifier) == false, 'event is suspended');
+            assert(
+                self.get_event_suspended_status(event_identifier) == false, 'event is suspended'
+            );
             self.end_event_(event_identifier);
 
             self.emit(Event::EventEnded(EventEnded { event_identifier: event_identifier }));
@@ -371,27 +377,31 @@ mod AttenSysEvent {
                     .entry(event_identifier)
                     .read();
                 let mut certified_attendees = array![];
-                for i in 0..self.all_attendance_marked_for_event.entry(event_identifier).len() {
-                    let attendee = self
+                for i in 0
+                    ..self
                         .all_attendance_marked_for_event
                         .entry(event_identifier)
-                        .at(i)
-                        .read();
-                    self.attendance_status.entry((attendee, event_identifier)).write(true);
-                    let nft_id = self
-                        .track_minted_nft_id
-                        .entry((event_identifier, nft_contract_address))
-                        .read();
-                    let nft_dispatcher = super::IAttenSysNftDispatcher {
-                        contract_address: nft_contract_address,
-                    };
-                    nft_dispatcher.mint(attendee, nft_id);
-                    self
-                        .track_minted_nft_id
-                        .entry((event_identifier, nft_contract_address))
-                        .write(nft_id + 1);
-                    certified_attendees.append(attendee);
-                };
+                        .len() {
+                            let attendee = self
+                                .all_attendance_marked_for_event
+                                .entry(event_identifier)
+                                .at(i)
+                                .read();
+                            self.attendance_status.entry((attendee, event_identifier)).write(true);
+                            let nft_id = self
+                                .track_minted_nft_id
+                                .entry((event_identifier, nft_contract_address))
+                                .read();
+                            let nft_dispatcher = super::IAttenSysNftDispatcher {
+                                contract_address: nft_contract_address,
+                            };
+                            nft_dispatcher.mint(attendee, nft_id);
+                            self
+                                .track_minted_nft_id
+                                .entry((event_identifier, nft_contract_address))
+                                .write(nft_id + 1);
+                            certified_attendees.append(attendee);
+                        };
                 self
                     .emit(
                         Event::BatchCertificationCompleted(
@@ -433,11 +443,14 @@ mod AttenSysEvent {
                 .write(count + 1);
 
             if self.all_event.len() > 0 {
-                for i in 0..self.all_event.len() {
-                    if self.all_event.at(i).read().event_name == event_details.event_name {
-                        self.all_event.at(i).signature_count.write(count + 1);
-                    }
-                }
+                for i in 0
+                    ..self
+                        .all_event
+                        .len() {
+                            if self.all_event.at(i).read().event_name == event_details.event_name {
+                                self.all_event.at(i).signature_count.write(count + 1);
+                            }
+                        }
             }
             self
                 .all_attendance_marked_for_event
@@ -482,11 +495,14 @@ mod AttenSysEvent {
                 .write(count + 1);
 
             if self.all_event.len() > 0 {
-                for i in 0..self.all_event.len() {
-                    if self.all_event.at(i).read().event_name == event_details.event_name {
-                        self.all_event.at(i).registered_attendants.write(count + 1);
-                    }
-                }
+                for i in 0
+                    ..self
+                        .all_event
+                        .len() {
+                            if self.all_event.at(i).read().event_name == event_details.event_name {
+                                self.all_event.at(i).registered_attendants.write(count + 1);
+                            }
+                        }
             }
             let call_data = UserAttendedEventStruct {
                 event_name: event_details.event_name, time: event_details.time, event_organizer: event_details.event_organizer, event_id : event_details.event_id, event_uri: event_details.event_uri
@@ -591,11 +607,14 @@ mod AttenSysEvent {
                 .write(reg_stat);
             //loop through the all_event vec and end the specific event
             if self.all_event.len() > 0 {
-                for i in 0..self.all_event.len() {
-                    if self.all_event.at(i).read().event_name == event_details.event_name {
-                        self.all_event.at(i).time.registration_open.write(reg_stat);
-                    }
-                }
+                for i in 0
+                    ..self
+                        .all_event
+                        .len() {
+                            if self.all_event.at(i).read().event_name == event_details.event_name {
+                                self.all_event.at(i).time.registration_open.write(reg_stat);
+                            }
+                        }
             }
             self
                 .emit(
@@ -665,7 +684,11 @@ mod AttenSysEvent {
             assert(event_identifier > 0, 'Invalid event ID');
             assert(uri.len() > 0, 'uri is empty');
             // check if such event exists
-            let event = self.specific_event_with_identifier.entry(event_identifier).read().event_organizer;
+            let event = self
+                .specific_event_with_identifier
+                .entry(event_identifier)
+                .read()
+                .event_organizer;
             assert(self.event_exists.entry(event).read(), 'No such event');
             assert(amt > 0, 'Invalid amount');
             let sponsor = get_caller_address();
@@ -681,12 +704,14 @@ mod AttenSysEvent {
             // verify if sponsor doesn't already exist
             let mut existing_sponsors = self.event_to_list_of_sponsors.entry(event);
             let mut sponsor_exists = false;
-            for i in 0..existing_sponsors.len() {
-                if sponsor == existing_sponsors.at(i).read() {
-                    sponsor_exists = true;
-                    break;
-                }
-            };
+            for i in 0
+                ..existing_sponsors
+                    .len() {
+                        if sponsor == existing_sponsors.at(i).read() {
+                            sponsor_exists = true;
+                            break;
+                        }
+                    };
 
             if !sponsor_exists {
                 existing_sponsors.append().write(sponsor);
@@ -728,19 +753,15 @@ mod AttenSysEvent {
             // self.emit(SponsorshipAddressSet { sponsor_contract_address });
         }
 
-        fn get_event_sponsorship_balance(
-            self: @ContractState, event: ContractAddress
-        ) -> u256 {
+        fn get_event_sponsorship_balance(self: @ContractState, event: ContractAddress) -> u256 {
             self.event_to_balance_of_sponsorship.entry(event).read()
         }
 
-        fn toggle_event_suspended_status(ref self: ContractState, event_identifier: u256, status: bool) {
+        fn toggle_event_suspended_status(
+            ref self: ContractState, event_identifier: u256, status: bool
+        ) {
             self.only_admin();
-            self
-                .specific_event_with_identifier
-                .entry(event_identifier)
-                .is_suspended
-                .write(status);
+            self.specific_event_with_identifier.entry(event_identifier).is_suspended.write(status);
         }
 
         fn get_event_suspended_status(self: @ContractState, event_identifier: u256) -> bool {
@@ -787,12 +808,15 @@ mod AttenSysEvent {
             self.specific_event_with_identifier.entry(event_identifier).active_status.write(false);
             //loop through the all_event vec and end the specific event
             if self.all_event.len() > 0 {
-                for i in 0..self.all_event.len() {
-                    if self.all_event.at(i).read().event_name == event_details.event_name {
-                        self.all_event.at(i).time.write(time_data);
-                        self.all_event.at(i).active_status.write(false);
-                    }
-                }
+                for i in 0
+                    ..self
+                        .all_event
+                        .len() {
+                            if self.all_event.at(i).read().event_name == event_details.event_name {
+                                self.all_event.at(i).time.write(time_data);
+                                self.all_event.at(i).active_status.write(false);
+                            }
+                        }
             }
         }
 
