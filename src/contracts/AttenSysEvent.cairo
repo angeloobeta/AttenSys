@@ -428,6 +428,7 @@ mod AttenSysEvent {
             let event_location = event_details.location;
             let caller = get_caller_address();
             let event_organizer_address = event_details.event_organizer;
+            assert(self.attendance_status.entry((attendee_, event_identifier)).read() == false, 'already marked');
             if event_location == 0 {
                 assert(caller == attendee_, 'wrong caller');
             } else {
@@ -452,6 +453,7 @@ mod AttenSysEvent {
                 .entry(event_identifier)
                 .signature_count
                 .write(count + 1);
+            self.attendance_status.entry((attendee_, event_identifier)).write(true);
 
             if self.all_event.len() > 0 {
                 for i in 0
@@ -467,7 +469,7 @@ mod AttenSysEvent {
                 .all_attendance_marked_for_event
                 .entry(event_identifier)
                 .append()
-                .write(get_caller_address());
+                .write(attendee_);
             let call_data = UserAttendedEventStruct {
                 event_name: event_details.event_name, time: event_details.time, event_organizer: event_details.event_organizer, event_id : event_details.event_id, event_uri: event_details.event_uri   
             };
