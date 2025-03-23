@@ -8,3 +8,10 @@ pub mod contracts {
     pub mod mock;
 }
 
+pub mod interfaces{
+    pub mod IAttenSysCourse;
+}
+
+pub mod base{
+   pub mod types; 
+}

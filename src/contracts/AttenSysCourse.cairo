@@ -1,4 +1,6 @@
 use core::starknet::ContractAddress;
+// use crate::interfaces::IAttenSysCourse;
+use crate::base::types::{Course, Creator};
 
 //to do : return the nft id and token uri in the get function
 
@@ -28,7 +30,7 @@ pub trait IAttenSysCourse<TContractState> {
     ) -> bool;
     fn get_course_infos(
         self: @TContractState, course_identifiers: Array<u256>,
-    ) -> Array<AttenSysCourse::Course>;
+    ) -> Array<Course>;
     fn is_user_taking_course(
         self: @TContractState, user: ContractAddress, course_id: u256
     ) -> bool;
@@ -37,13 +39,13 @@ pub trait IAttenSysCourse<TContractState> {
     ) -> bool;
     fn get_all_taken_courses(
         self: @TContractState, user: ContractAddress
-    ) -> Array<AttenSysCourse::Course>;
+    ) -> Array<Course>;
     fn get_user_completed_courses(self: @TContractState, user: ContractAddress) -> Array<u256>;
-    fn get_all_courses_info(self: @TContractState) -> Array<AttenSysCourse::Course>;
+    fn get_all_courses_info(self: @TContractState) -> Array<Course>;
     fn get_all_creator_courses(
         self: @TContractState, owner_: ContractAddress,
-    ) -> Array<AttenSysCourse::Course>;
-    fn get_creator_info(self: @TContractState, creator: ContractAddress) -> AttenSysCourse::Creator;
+    ) -> Array<Course>;
+    fn get_creator_info(self: @TContractState, creator: ContractAddress) -> Creator;
     fn get_course_nft_contract(self: @TContractState, course_identifier: u256) -> ContractAddress;
     fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
     fn claim_admin_ownership(ref self: TContractState);
@@ -66,6 +68,7 @@ pub trait IAttenSysNft<TContractState> {
 #[starknet::contract]
 pub mod AttenSysCourse {
     use super::IAttenSysNftDispatcherTrait;
+    use crate::base::types::{Course, Creator};
     use core::starknet::{
         ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash,
         contract_address_const,
@@ -159,25 +162,7 @@ pub mod AttenSysCourse {
         // user is certified on a course status
         is_course_certified: Map::<(ContractAddress, u256), bool>
     }
-    //find a way to keep track of all course identifiers for each owner.
-    #[derive(Drop, Serde, starknet::Store)]
-    pub struct Creator {
-        pub address: ContractAddress,
-        pub number_of_courses: u256,
-        pub creator_status: bool,
-    }
 
-    //consider the idea of having the uri for each course within the course struct.
-
-    #[derive(Drop, Clone, Serde, starknet::Store)]
-    pub struct Course {
-        pub owner: ContractAddress,
-        pub course_identifier: u256,
-        pub accessment: bool,
-        pub uri: ByteArray,
-        pub course_ipfs_uri: ByteArray,
-        pub is_suspended: bool,
-    }
 
     #[derive(Drop, Copy, Serde, starknet::Store)]
     pub struct Uri {
@@ -585,4 +570,3 @@ pub mod AttenSysCourse {
         }
     }
 }
-
