@@ -26,23 +26,15 @@ pub trait IAttenSysCourse<TContractState> {
     fn check_course_completion_status_n_certification(
         self: @TContractState, course_identifier: u256, candidate: ContractAddress,
     ) -> bool;
-    fn get_course_infos(
-        self: @TContractState, course_identifiers: Array<u256>,
-    ) -> Array<Course>;
-    fn is_user_taking_course(
-        self: @TContractState, user: ContractAddress, course_id: u256
-    ) -> bool;
+    fn get_course_infos(self: @TContractState, course_identifiers: Array<u256>,) -> Array<Course>;
+    fn is_user_taking_course(self: @TContractState, user: ContractAddress, course_id: u256) -> bool;
     fn is_user_certified_for_course(
         self: @TContractState, user: ContractAddress, course_id: u256
     ) -> bool;
-    fn get_all_taken_courses(
-        self: @TContractState, user: ContractAddress
-    ) -> Array<Course>;
+    fn get_all_taken_courses(self: @TContractState, user: ContractAddress) -> Array<Course>;
     fn get_user_completed_courses(self: @TContractState, user: ContractAddress) -> Array<u256>;
     fn get_all_courses_info(self: @TContractState) -> Array<Course>;
-    fn get_all_creator_courses(
-        self: @TContractState, owner_: ContractAddress,
-    ) -> Array<Course>;
+    fn get_all_creator_courses(self: @TContractState, owner_: ContractAddress,) -> Array<Course>;
     fn get_creator_info(self: @TContractState, creator: ContractAddress) -> Creator;
     fn get_course_nft_contract(self: @TContractState, course_identifier: u256) -> ContractAddress;
     fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
@@ -54,11 +46,12 @@ pub trait IAttenSysCourse<TContractState> {
     fn get_suspension_status(self: @TContractState, course_identifier: u256) -> bool;
     fn toggle_suspension(ref self: TContractState, course_identifier: u256, suspend: bool);
 }
-
-
-
 // use crate::interfaces::IAttenSysCourse;
-// use crate::base:types::{Event, CourseCreated, CourseReplaced, CourseCertClaimed, AdminTransferred, CourseSuspended, };
+// use crate::base:types::{Event, CourseCreated, CourseReplaced, CourseCertClaimed,
+// AdminTransferred, CourseSuspended, };
 //to do : return the nft id and token uri in the get function
 
-// use crate::base:types::{Event, CourseCreated, CourseReplaced, CourseCertClaimed, AdminTransferred, CourseSuspended, CourseUnsuspended};
+// use crate::base:types::{Event, CourseCreated, CourseReplaced, CourseCertClaimed,
+// AdminTransferred, CourseSuspended, CourseUnsuspended};
+
+
