@@ -1,5 +1,6 @@
 use core::starknet::ContractAddress;
 use crate::interfaces::IAttenSysCourse::IAttenSysCourse;
+// use crate::contracts::Registration;
 
 #[starknet::interface]
 pub trait IAttenSysNft<TContractState> {
@@ -11,8 +12,9 @@ pub trait IAttenSysNft<TContractState> {
 #[starknet::contract]
 pub mod AttenSysCourse {
     use super::IAttenSysNftDispatcherTrait;
-    use crate::base::types::{Course, Creator};
 
+    use crate::contracts::Registration;
+    use crate::base::types::{Course, Creator};
 
     use core::starknet::{
         ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash,
@@ -74,9 +76,11 @@ pub mod AttenSysCourse {
         course_identifier: u256,
     }
 
+
     #[storage]
     struct Storage {
         //save content creator info including all all contents created.
+        // #[substorage(v0)]
         course_creator_info: Map::<ContractAddress, Creator>,
         //saves specific course (course details only), set this when creating course
         specific_course_info_with_identifer: Map::<u256, Course>,
@@ -94,7 +98,7 @@ pub mod AttenSysCourse {
         hash: ClassHash,
         //admin address
         admin: ContractAddress,
-        // address of intended new admin
+        // address of intended new aidentifier_trackerdmin
         intended_new_admin: ContractAddress,
         //saves nft contract address associated to event
         course_nft_contract_address: Map::<u256, ContractAddress>,
@@ -135,28 +139,72 @@ pub mod AttenSysCourse {
             //make an address zero check
             let identifier_count = self.identifier_tracker.read();
             let current_identifier = identifier_count + 1;
+            let mut current_creator_info: Creator = self.course_creator_info.entry(owner_).read();
+            let (course_call_data, current_creator_info) = Registration::update_creator_info(
+                owner_,
+                current_identifier,
+                course_ipfs_uri.clone(),
+                accessment_,
+                base_uri.clone(),
+                current_creator_info,
+            );
+
+            let deployed_contract_address = Registration::deploy_nft_contract(
+                base_uri.clone(),
+                name_.clone(),
+                symbol.clone(),
+                current_identifier,
+                self.hash.read(),
+            );
 
             self
-                .update_creator_info(
-                    owner_,
-                    current_identifier,
-                    course_ipfs_uri.clone(),
-                    accessment_,
-                    base_uri.clone()
+                .all_course_info
+                .append()
+                .write(
+                    Course {
+                        owner: owner_,
+                        course_identifier: current_identifier.clone(),
+                        accessment: accessment_,
+                        uri: base_uri.clone(),
+                        course_ipfs_uri: course_ipfs_uri.clone(),
+                        is_suspended: false,
+                    }
                 );
 
-            let deployed_contract_address = self
-                .deploy_nft_contract(
-                    base_uri.clone(),
-                    name_.clone(),
-                    symbol.clone(),
-                    current_identifier
+            self
+                .creator_to_all_content
+                .entry(owner_)
+                .append()
+                .write(
+                    Course {
+                        owner: owner_,
+                        course_identifier: current_identifier.clone(),
+                        accessment: accessment_,
+                        uri: base_uri.clone(),
+                        course_ipfs_uri: course_ipfs_uri.clone(),
+                        is_suspended: false,
+                    },
                 );
+            self.course_creator_info.entry(owner_).write(current_creator_info);
+            self
+                .specific_course_info_with_identifer
+                .entry(current_identifier.clone())
+                .write(course_call_data);
+            self.identifier_tracker.write(current_identifier.clone());
+
+            self
+                .track_minted_nft_id
+                .entry((current_identifier.clone(), deployed_contract_address))
+                .write(1);
+            self
+                .course_nft_contract_address
+                .entry(current_identifier.clone())
+                .write(deployed_contract_address);
 
             self
                 .emit(
                     CourseCreated {
-                        course_identifier: current_identifier,
+                        course_identifier: current_identifier.clone(),
                         owner_: owner_,
                         accessment_: accessment_,
                         base_uri: base_uri,
@@ -468,98 +516,6 @@ pub mod AttenSysCourse {
     impl InternalFunctions of InternalFunctionsTrait {
         fn zero_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<0>()
-        }
-
-        fn update_creator_info(
-            ref self: ContractState,
-            owner_: ContractAddress,
-            current_identifier: u256,
-            course_ipfs_uri: ByteArray,
-            accessment_: bool,
-            base_uri: ByteArray
-        ) {
-            let mut current_creator_info: Creator = self.course_creator_info.entry(owner_).read();
-            if current_creator_info.number_of_courses > 0 {
-                assert(owner_ == get_caller_address(), 'not owner');
-                current_creator_info.number_of_courses += 1;
-            } else {
-                current_creator_info.address = owner_;
-                current_creator_info.number_of_courses += 1;
-                current_creator_info.creator_status = true;
-            }
-            let mut course_call_data: Course = Course {
-                owner: owner_,
-                course_identifier: current_identifier,
-                accessment: accessment_,
-                uri: base_uri.clone(),
-                course_ipfs_uri: course_ipfs_uri.clone(),
-                is_suspended: false,
-            };
-
-            self
-                .all_course_info
-                .append()
-                .write(
-                    Course {
-                        owner: owner_,
-                        course_identifier: current_identifier,
-                        accessment: accessment_,
-                        uri: base_uri.clone(),
-                        course_ipfs_uri: course_ipfs_uri.clone(),
-                        is_suspended: false,
-                    }
-                );
-
-            self
-                .creator_to_all_content
-                .entry(owner_)
-                .append()
-                .write(
-                    Course {
-                        owner: owner_,
-                        course_identifier: current_identifier,
-                        accessment: accessment_,
-                        uri: base_uri.clone(),
-                        course_ipfs_uri: course_ipfs_uri.clone(),
-                        is_suspended: false,
-                    },
-                );
-            self.course_creator_info.entry(owner_).write(current_creator_info);
-            self
-                .specific_course_info_with_identifer
-                .entry(current_identifier)
-                .write(course_call_data);
-            self.identifier_tracker.write(current_identifier);
-        }
-        fn deploy_nft_contract(
-            ref self: ContractState,
-            base_uri: ByteArray,
-            name_: ByteArray,
-            symbol: ByteArray,
-            current_identifier: u256
-        ) -> ContractAddress {
-            // constructor arguments
-            let mut constructor_args = array![];
-            base_uri.serialize(ref constructor_args);
-            name_.serialize(ref constructor_args);
-            symbol.serialize(ref constructor_args);
-            let contract_address_salt: felt252 = current_identifier.try_into().unwrap();
-
-            //deploy contract
-            let (deployed_contract_address, _) = deploy_syscall(
-                self.hash.read(), contract_address_salt, constructor_args.span(), false,
-            )
-                .expect('failed to deploy_syscall');
-            self
-                .track_minted_nft_id
-                .entry((current_identifier, deployed_contract_address))
-                .write(1);
-            self
-                .course_nft_contract_address
-                .entry(current_identifier)
-                .write(deployed_contract_address);
-
-            deployed_contract_address
         }
     }
 }
