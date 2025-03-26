@@ -13,7 +13,8 @@ pub trait IAttenSysNft<TContractState> {
 pub mod AttenSysCourse {
     use super::IAttenSysNftDispatcherTrait;
 
-    use crate::contracts::Registration;
+
+    use crate::contracts::Registration::Registration;
     use crate::base::types::{Course, Creator};
 
     use core::starknet::{
@@ -260,8 +261,8 @@ pub mod AttenSysCourse {
         }
 
 
-        //from frontend, the idea will be to obtain the previous uri, transfer content from the
-        //previous uri to the new uri
+        // from frontend, the idea will be to obtain the previous uri, transfer content from the
+        // previous uri to the new uri
         // and write the new uri to state.
         fn add_replace_course_content(
             ref self: ContractState,
@@ -284,8 +285,8 @@ pub mod AttenSysCourse {
                 .entry(course_identifier)
                 .write(current_course_info.clone());
 
-            //run a loop to check if course ID exists in all course info vece, if it does, replace
-            //the uris.
+            //run a loop to check if course ID exists in all course info vece, if it does,
+            // replace //the uris.
             if self.all_course_info.len() == 0 {
                 self.all_course_info.append().write(current_course_info.clone());
             } else {
@@ -331,6 +332,7 @@ pub mod AttenSysCourse {
                     },
                 );
         }
+
 
         fn finish_course_claim_certification(ref self: ContractState, course_identifier: u256) {
             //only check for accessment score. that is if there's assesment

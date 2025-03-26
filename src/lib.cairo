@@ -12,8 +12,6 @@ pub mod contracts {
 
 pub mod interfaces {
     pub mod IAttenSysCourse;
-    pub mod IAttenSysNft;
-    pub mod IRegistration;
 }
 
 pub mod base {
