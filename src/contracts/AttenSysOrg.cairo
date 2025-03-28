@@ -5,8 +5,8 @@ use crate::interface::IAttenSysOrg;
 #[starknet::contract]
 pub mod AttenSysOrg {
     use starknet::event::EventEmitter;
-    use crate::contracts::OrganizationManagement::OrganizationManagement;
-    use crate::contracts::BootCampManagement::BootCampManagement;
+    use crate::contracts::OrganizationManagement;
+    use crate::contracts::BootCampManagement;
     use crate::base::types::{
         Organization, Bootcamp, Instructor, Class, Student, RegisteredBootcamp, Bootcampclass
     };
@@ -251,11 +251,11 @@ pub mod AttenSysOrg {
     }
 
     #[abi(embed_v0)]
-    impl IAttenSysOrgImpl of super::IAttenSysOrg<ContractState> {
+    impl IAttenSysOrgImpl: super::IAttenSysOrg<ContractState> {
         //ability to create organization profile, each org info should be saved properly, use
         //mappings and structs where necessary
         fn create_org_profile(
-            ref self: ContractState, org_name: ByteArray, org_ipfs_uri: ByteArray,
+            ref self: ContractState, _org_name: ByteArray, _org_ipfs_uri: ByteArray,
         ) {
             //check that the caller address has an organization created before
             let creator = get_caller_address();
@@ -266,16 +266,16 @@ pub mod AttenSysOrg {
                 // create organization and update to an address
                 let org_call_data: Organization = Organization {
                     address_of_org: creator,
-                    org_name: org_name.clone(),
+                    org_name: _org_name.clone(),
                     number_of_instructors: 0,
                     number_of_students: 0,
                     number_of_all_classes: 0,
                     number_of_all_bootcamps: 0,
-                    org_ipfs_uri: org_ipfs_uri.clone(),
+                    org_ipfs_uri: _org_ipfs_uri.clone(),
                     total_sponsorship_fund: 0,
                 };
 
-                let uri = org_ipfs_uri.clone();
+                let uri = _org_ipfs_uri.clone();
 
                 self.all_org_info.append().write(org_call_data);
                 self
@@ -284,20 +284,20 @@ pub mod AttenSysOrg {
                     .write(
                         Organization {
                             address_of_org: creator,
-                            org_name: org_name.clone(),
+                            org_name: _org_name.clone(),
                             number_of_instructors: 0,
                             number_of_students: 0,
                             number_of_all_classes: 0,
                             number_of_all_bootcamps: 0,
-                            org_ipfs_uri: org_ipfs_uri,
+                            org_ipfs_uri: _org_ipfs_uri,
                             total_sponsorship_fund: 0,
                         },
                     );
-                let orginization_name = org_name.clone();
+                let orginization_name = _org_name.clone();
 
                 self.emit(OrganizationProfile { org_name: orginization_name, org_ipfs_uri: uri });
                 // add the organization creator as an instructor
-                add_instructor_to_org(ref self, creator, creator, org_name);
+                add_instructor_to_org(ref self, creator, creator, _org_name);
             } else {
                 panic!("created an organization.");
             }
@@ -305,12 +305,12 @@ pub mod AttenSysOrg {
 
 
         fn batch_certify_students(
-            ref self: ContractState, org_: ContractAddress, bootcamp_id: u64,
+            ref self: ContractState, _org_: ContractAddress, _bootcamp_id: u64,
         ) {
             //only instructor under an organization issues certificate
             //all of the registered students with attendance
             let caller = get_caller_address();
-            let is_instructor = self.instructor_part_of_org.entry((org_, caller)).read();
+            let is_instructor = self.instructor_part_of_org.entry((_org_, caller)).read();
             let mut attendance_counter = 0;
             assert(is_instructor, 'not an instructor');
     
@@ -318,12 +318,12 @@ pub mod AttenSysOrg {
             for i in 0
                 ..self
                     .org_to_requests
-                    .entry(org_)
+                    .entry(_org_)
                     .len() {
-                        if self.org_to_requests.entry(org_).at(i).status.read() == 1 {
+                        if self.org_to_requests.entry(_org_).at(i).status.read() == 1 {
                             arr_of_request
                                 .append(
-                                    self.org_to_requests.entry(org_).at(i).address_of_student.read()
+                                    self.org_to_requests.entry(_org_).at(i).address_of_student.read()
                                 );
                         }
                     };
@@ -331,11 +331,11 @@ pub mod AttenSysOrg {
             for i in 0
                 ..self
                     .bootcamp_class_data_id
-                    .entry((org_, bootcamp_id))
+                    .entry((_org_, _bootcamp_id))
                     .len() {
                         class_id_arr
                             .append(
-                                self.bootcamp_class_data_id.entry((org_, bootcamp_id)).at(i).read()
+                                self.bootcamp_class_data_id.entry((_org_, _bootcamp_id)).at(i).read()
                             );
                     };
             //@todo mint an nft associated to the bootcamp to each student.
@@ -349,8 +349,8 @@ pub mod AttenSysOrg {
                                         .student_attendance_status
                                         .entry(
                                             (
-                                                org_,
-                                                bootcamp_id,
+                                                _org_,
+                                                _bootcamp_id,
                                                 *class_id_arr.at(k),
                                                 *arr_of_request.at(i)
                                             )
@@ -364,11 +364,11 @@ pub mod AttenSysOrg {
                         if attendance_counter > attendance_criteria {
                             self
                                 .certify_student
-                                .entry((org_, bootcamp_id, *arr_of_request.at(i)))
+                                .entry((_org_, _bootcamp_id, *arr_of_request.at(i)))
                                 .write(true);
                             self
                                 .certified_students_for_bootcamp
-                                .entry((org_, bootcamp_id))
+                                .entry((_org_, _bootcamp_id))
                                 .append()
                                 .write(*arr_of_request.at(i));
                             attendance_counter = 0;
@@ -377,14 +377,14 @@ pub mod AttenSysOrg {
             self
                 .emit(
                     StudentsCertified {
-                        org_address: org_, class_id: bootcamp_id, student_addresses: arr_of_request,
+                        org_address: _org_, class_id: _bootcamp_id, student_addresses: arr_of_request,
                     },
                 )
         }
 
         // add array of instructor to an organization
         fn add_instructor_to_org(
-            ref self: ContractState, instructor: Array<ContractAddress>, org_name: ByteArray,
+            ref self: ContractState, instructor: Array<ContractAddress>, _org_name: ByteArray,
         ) {
             let caller = get_caller_address();
             let status: bool = self.created_status.entry(caller).read();
@@ -396,12 +396,12 @@ pub mod AttenSysOrg {
                     ..instructor
                         .len() {
                             add_instructor_to_org(
-                                ref self, caller, *instructor[i], org_name.clone()
+                                ref self, caller, *instructor[i], _org_name.clone()
                             );
                         };
                 self
                     .emit(
-                        InstructorAddedToOrg { org_name: org_name.clone(), instructor: instructor },
+                        InstructorAddedToOrg { org_name: _org_name.clone(), instructor: instructor },
                     )
             } else {
                 panic!("no organization created.");
@@ -1000,7 +1000,7 @@ pub mod AttenSysOrg {
         ref self: ContractState,
         caller: ContractAddress,
         instructor: ContractAddress,
-        org_name: ByteArray,
+        _org_name: ByteArray,
     ) {
         assert(!instructor.is_zero(), 'zero address.');
         if !self.instructor_part_of_org.entry((caller, instructor)).read() {
@@ -1009,7 +1009,7 @@ pub mod AttenSysOrg {
             let mut instructor_data: Instructor = Instructor {
                 address_of_instructor: instructor,
                 num_of_classes: 0,
-                name_of_org: org_name.clone(),
+                name_of_org: _org_name.clone(),
                 organization_address: caller,
             };
             self.org_to_instructors.entry(caller).append().write(instructor_data);
@@ -1021,7 +1021,7 @@ pub mod AttenSysOrg {
                     Instructor {
                         address_of_instructor: instructor,
                         num_of_classes: 0,
-                        name_of_org: org_name,
+                        name_of_org: _org_name,
                         organization_address: caller,
                     },
                 );
@@ -1042,7 +1042,7 @@ pub mod AttenSysOrg {
     }
 
     #[generate_trait]
-    impl InternalFunctions of InternalFunctionsTrait {
+    impl InternalFunctions: InternalFunctionsTrait {
         fn zero_address(self: @ContractState) -> ContractAddress {
             contract_address_const::<0>()
         }
