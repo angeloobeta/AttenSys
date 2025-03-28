@@ -1,13 +1,12 @@
 use core::starknet::{ContractAddress};
 
 pub mod OrganizationManagement {
-    use crate::base::types{
+    use crate::base::types::{
         Organization, Bootcamp, Instructor, Class, Student, RegisteredBootcamp, Bootcampclass
     };
 
     use core::starknet::{
-        ContractAddress, syscalls::deploy_syscall,
-        contract_address_const,
+        ContractAddress, contract_address_const,
     };
 
 

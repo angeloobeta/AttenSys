@@ -7,7 +7,7 @@ pub mod AttenSysOrg {
     use starknet::event::EventEmitter;
     use crate::contracts::OrganizationManagement::OrganizationManagement;
     use crate::contracts::BootCampManagement::BootCampManagement;
-    use crate::base::types{
+    use crate::base::types::{
         Organization, Bootcamp, Instructor, Class, Student, RegisteredBootcamp, Bootcampclass
     };
 
