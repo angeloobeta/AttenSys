@@ -1,5 +1,5 @@
 use core::starknet::ContractAddress;
-use crate::interface::IAttenSysOrg::IAttenSysOrg;
+use crate::interface::IAttenSysOrg;
 
 //The contract
 #[starknet::contract]

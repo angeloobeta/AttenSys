@@ -6,7 +6,7 @@ pub mod OrganizationManagement {
     };
 
     use core::starknet::{
-        ContractAddress, contract_address_const,
+        ContractAddress,
     };
 
 
@@ -351,7 +351,7 @@ pub mod OrganizationManagement {
                             );
                     };
             arr_of_all_uploaded_bootcamps_link
-        }t_all_registration_request(self, org_)
+        }
     }
 
      // read functions

@@ -18,7 +18,7 @@ pub mod AttenSysCourse {
     use crate::base::types::{Course, Creator};
 
     use core::starknet::{
-        ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash,
+        ContractAddress, get_caller_address, ClassHash,
         contract_address_const,
     };
     use core::starknet::storage::{
