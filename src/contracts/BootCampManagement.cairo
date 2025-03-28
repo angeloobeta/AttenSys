@@ -1,7 +1,4 @@
 use core::starknet::{ContractAddress};
-use core::starknet::storage::{Map, Vec};
-use core::num::traits::Zero;
-
 
 pub mod OrganizationManagement {
     use crate::base::types{
@@ -9,7 +6,7 @@ pub mod OrganizationManagement {
     };
 
     use core::starknet::{
-        ContractAddress, ClassHash, get_caller_address, syscalls::deploy_syscall,
+        ContractAddress, syscalls::deploy_syscall,
         contract_address_const,
     };
 
@@ -314,6 +311,7 @@ pub mod OrganizationManagement {
             bootcamp.active_meet_link
         }
 
+
      pub   fn get_bootcamp_uploaded_video_link(
             self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
         ) -> Array<ByteArray> {
@@ -425,22 +423,6 @@ pub mod OrganizationManagement {
     ) -> bool {
         self.certify_student.entry((org, bootcamp_id, student)).read()
     }
-
-
-   pub fn get_all_registration_request(self: @ContractState, org_: ContractAddress) -> Array<Student> {
-        let mut arr_of_request = array![];
-
-        for i in 0
-            ..self
-                .org_to_requests
-                .entry(org_)
-                .len() {
-                    arr_of_request.append(self.org_to_requests.entry(org_).at(i).read());
-                };
-
-        arr_of_request
-    }
-}
 
 
 }
