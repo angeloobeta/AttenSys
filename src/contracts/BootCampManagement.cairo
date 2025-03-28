@@ -299,10 +299,30 @@ pub mod OrganizationManagement {
     }
 
 
-   pub fn get_all_registration_request(
+    fn get_all_registration_request(
         self: @ContractState, org_: ContractAddress,
     ) -> Array<Student> {
-        ge
+        get_all_registration_request(self, org_)
+    }
+
+
+
+    fn get_all_registration_request(self: @ContractState, org_: ContractAddress) -> Array<Student> {
+        let mut arr_of_request = array![];
+
+        for i in 0
+            ..self
+                .org_to_requests
+                .entry(org_)
+                .len() {
+                    arr_of_request.append(self.org_to_requests.entry(org_).at(i).read());
+                };
+
+        arr_of_request
+    }
+
+
+   
         
         pub fn get_bootcamp_active_meet_link(
             self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
