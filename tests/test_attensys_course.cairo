@@ -4,7 +4,7 @@ use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
 };
 
-use attendsys::contracts::AttenSysCourse::{
+use attendsys::interfaces::IAttenSysCourse::{
     IAttenSysCourseDispatcher, IAttenSysCourseDispatcherTrait,
 };
 
