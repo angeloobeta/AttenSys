@@ -9,6 +9,7 @@ pub mod contracts {
     pub mod mock;
     mod Registration;
     mod BootCampManagement;
+    mod OrganisationManagement;
 }
 
 pub mod interfaces {

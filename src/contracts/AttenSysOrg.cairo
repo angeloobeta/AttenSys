@@ -5,16 +5,8 @@ use crate::interface::IAttenSysOrg::IAttenSysOrg;
 #[starknet::contract]
 pub mod AttenSysOrg {
     use starknet::event::EventEmitter;
-    
-    use core::num::traits::Zero;
-    use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcherTrait;
-    use attendsys::contracts::AttenSysSponsor::IAttenSysSponsorDispatcher;
-
-
-    use crate::contracts::OrganizationManagement::OrganizationManagementTrait;
-    use crate::contracts::AttendanceManagement::AttendanceManagementTrait;
-    use crate::contracts::BootcampManagement::BootcampManagementTrait;
-    use crate::contracts::utils::UtilsTrait;
+    use crate::contracts::OrganizationManagement::OrganizationManagement;
+    use crate::contracts::BootCampManagement::BootCampManagement;
     use crate::base::types{
         Organization, Bootcamp, Instructor, Class, Student, RegisteredBootcamp, Bootcampclass
     };
