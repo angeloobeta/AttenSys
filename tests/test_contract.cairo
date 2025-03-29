@@ -5,10 +5,8 @@ use snforge_std::{
     spy_events, EventSpyAssertionsTrait, test_address, stop_cheat_caller_address,
 };
 
-
-use attendsys::interfaces::IAttenSysOrg::IAttenSysOrgDispatcher;
-use attendsys::interfaces::IAttenSysOrg::IAttenSysOrgDispatcherTrait;
-
+// This should match how the interface is defined in your AttenSysOrg.cairo file
+use attendsys::contracts::AttenSysOrg::{IAttenSysOrgDispatcher, IAttenSysOrgDispatcherTrait};
 
 // use attendsys::AttenSys::IAttenSysSafeDispatcher;
 // use attendsys::AttenSys::IAttenSysSafeDispatcherTrait;

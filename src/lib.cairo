@@ -8,12 +8,13 @@ pub mod contracts {
     pub mod AttenSysToken;
     pub mod mock;
     mod Registration;
+    pub mod AttenSysOrg;
     // mod BootCampManagement;
 }
 
 pub mod interfaces {
     pub mod IAttenSysCourse;
-    // pub mod IAttenSysOrg;
+    pub mod IAttenSysOrg;
 }
 
 pub mod base {
