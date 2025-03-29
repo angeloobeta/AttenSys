@@ -6,6 +6,10 @@ use snforge_std::{
 };
 
 
+use attendsys::interfaces::IAttenSysOrg::IAttenSysOrgDispatcher;
+use attendsys::interfaces::IAttenSysOrg::IAttenSysOrgDispatcherTrait;
+
+
 // use attendsys::AttenSys::IAttenSysSafeDispatcher;
 // use attendsys::AttenSys::IAttenSysSafeDispatcherTrait;
 use attendsys::contracts::AttenSysCourse::AttenSysCourse;
