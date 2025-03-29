@@ -1,18 +1,79 @@
-use core::starknet::{ContractAddress};
+use core::starknet::{ContractAddress, get_caller_address};
+use crate::base::types::{Organization, Instructor};
+use crate::events::{OrganizationProfile, InstructorAddedToOrg, SponsorshipAddressSet, StudentsCertified, InstructorRemovedFromOrg, RegistrationDeclined,  AttendanceMarked, RegistrationApproved, SponsorshipFundWithdrawn, OrganizationSuspended, OrganizationSponsored, BootcampRegistration};
+use crate::storage_groups::{OrganizationStorage, InstructorStorage, SystemStorage};
 
-pub mod OrganizationManagement {
-    use crate::base::types::{
-        Organization, Bootcamp, Instructor, Class, Student, RegisteredBootcamp, Bootcampclass
-    };
-
-    use core::starknet::{
-        ContractAddress,
-    };
-
-
-    // Must make the admin an instructor to successfully call this
-   pub fn create_bootcamp(
+#[starknet::interface]
+pub trait IBootCampManagement<TContractState> {
+    fn create_bootcamp(
+        // ref self: ContractState,
+        org_name: ByteArray,
+        bootcamp_name: ByteArray,
+        nft_name: ByteArray,
+        nft_symbol: ByteArray,
+        nft_uri: ByteArray,
+        num_of_class_to_create: u256,
+        bootcamp_ipfs_uri: ByteArray,
+    );
+    fn register_for_bootcamp(
+        ref self: TContractState,
+        org_: ContractAddress,
+        bootcamp_id: u64,
+        student_uri: ByteArray,
+    );
+    fn approve_registration(
+        ref self: TContractState,
+        student_address: ContractAddress,
+        bootcamp_id: u64,
+    );
+    fn decline_registration(
+        ref self: TContractState,
+        student_address: ContractAddress,
+        bootcamp_id: u64,
+    );
+    fn mark_attendance_for_a_class(
         ref self: ContractState,
+        org_: ContractAddress,
+        instructor_: ContractAddress,
+        class_id: u64,
+        bootcamp_id: u64,
+    );
+    fn get_all_registration_request(
+        self: @ContractState, org_: ContractAddress,
+    ) -> Array<Student>;
+
+    fn get_bootcamp_active_meet_link(
+        self: @ContractState, org_: felt252, bootcamp_id: u64,
+    ) -> ByteArray;
+    fn get_bootcamp_uploaded_video_link(
+        self: @ContractState, org_: felt252, bootcamp_id: u64,
+    ) -> Array<ByteArray>;
+    fn get_all_bootcamps_on_platform(self: @ContractState) -> Array<Bootcamp>;
+    fn get_bootcamp_info(
+        self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
+    ) -> Bootcamp;
+    fn is_bootcamp_suspended(
+        self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
+    ) -> bool;
+    fn get_registered_bootcamp(
+        self: @ContractState, student: ContractAddress,
+    ) -> Array<RegisteredBootcamp>;
+    fn get_all_bootcamp_classes(
+        self: @ContractState, org: ContractAddress, bootcamp_id: u64,
+    ) -> Array<u64>;
+    fn get_certified_student_bootcamp_address(
+        self: @ContractState, org: ContractAddress, bootcamp_id: u64,
+    ) -> Array<ContractAddress>;
+    fn get_bootcamp_certification_status(
+        self: @ContractState, org: ContractAddress, bootcamp_id: u64, student: ContractAddress,
+    ) -> bool;
+}
+
+
+#[generate_trait]
+pub impl BootCampManagement of IBootCampManagement<ContractState> {
+    fn create_bootcamp(
+        // ref self: ContractState,
         org_name: ByteArray,
         bootcamp_name: ByteArray,
         nft_name: ByteArray,
@@ -98,176 +159,138 @@ pub mod OrganizationManagement {
         }
     }
 
-
-    pub  fn register_for_bootcamp(
+    fn register_for_bootcamp(
         ref self: ContractState,
         org_: ContractAddress,
         bootcamp_id: u64,
         student_uri: ByteArray,
     ) {
         let caller = get_caller_address();
-        let status: bool = self.created_status.entry(org_).read();
-        // check org is created
+        let status: bool = StorageMapReadAccess::read(self.created_status.entry(org_));
         if status {
             assert(
-                !self.bootcamp_suspended.entry(org_).entry(bootcamp_id).read(),
-                'Bootcamp suspended',
+                !StorageMapReadAccess::read(self.bootcamp_suspended.entry(org_).entry(bootcamp_id)),
+                "Bootcamp suspended",
             );
             let mut bootcamp = self.org_to_bootcamps.entry(org_);
-            for i in 0
-                ..bootcamp
-                    .len() {
-                        if i == bootcamp_id {
-                            let mut student: Student = self.student_info.entry(caller).read();
-                            student
-                                .num_of_bootcamps_registered_for = student
-                                .num_of_bootcamps_registered_for
-                                + 1;
-                            student.student_details_uri = student_uri.clone();
-                            self.student_info.entry(caller).write(student);
-                            self
-                                .org_to_requests
-                                .entry(org_)
-                                .append()
-                                .write(
-                                    Student {
-                                        address_of_student: caller,
-                                        num_of_bootcamps_registered_for: self
-                                            .student_info
-                                            .entry(caller)
-                                            .read()
-                                            .num_of_bootcamps_registered_for,
-                                        status: 0,
-                                        student_details_uri: self
-                                            .student_info
-                                            .entry(caller)
-                                            .read()
-                                            .student_details_uri,
-                                    },
-                                );
-                        }
-                    };
-
-            self.emit(BootcampRegistration { org_address: org_, bootcamp_id: bootcamp_id });
+            for i in 0..ArrayTrait::len(bootcamp) {
+                if i == bootcamp_id {
+                    let mut student: Student =
+                        StorageMapReadAccess::read(self.student_info.entry(caller));
+                    student.num_of_bootcamps_registered_for += 1;
+                    student.student_details_uri = student_uri.clone();
+                    StorageMapWriteAccess::write(self.student_info.entry(caller), student);
+                    MutableArrayTrait::append(
+                        self.org_to_requests.entry(org_),
+                        Student {
+                            address_of_student: caller,
+                            num_of_bootcamps_registered_for: student.num_of_bootcamps_registered_for,
+                            status: 0,
+                            student_details_uri: student.student_details_uri,
+                        },
+                    );
+                }
+            }
+            // Emit event
+            self.emit(BootcampRegistration {
+                org_address: org_,
+                bootcamp_id: bootcamp_id,
+            });
         } else {
             panic!("not part of organization.");
         }
     }
 
-
-
-   pub fn approve_registration(
-        ref self: ContractState, student_address: ContractAddress, bootcamp_id: u64,
+    fn approve_registration(
+        ref self: ContractState,
+        student_address: ContractAddress,
+        bootcamp_id: u64,
     ) {
         let caller = get_caller_address();
-        let status: bool = self.created_status.entry(caller).read();
+        let status: bool = StorageMapReadAccess::read(self.created_status.entry(caller));
         if status {
-            for i in 0
-                ..self
-                    .org_to_requests
-                    .entry(caller)
-                    .len() {
-                        if self
-                            .org_to_requests
-                            .entry(caller)
-                            .at(i)
-                            .read()
-                            .address_of_student == student_address {
-                            let mut student = self.org_to_requests.entry(caller).at(i).read();
-                            student.status = 1;
-                            self.org_to_requests.entry(caller).at(i).write(student);
-
-                            let mut the_bootcamp: Bootcamp = self
-                                .org_to_bootcamps
-                                .entry(caller)
-                                .at(bootcamp_id)
-                                .read();
-
-                            the_bootcamp.number_of_students = the_bootcamp.number_of_students
-                                + 1;
-                            self
-                                .org_to_bootcamps
-                                .entry(caller)
-                                .at(bootcamp_id)
-                                .write(the_bootcamp);
-                            self
-                                .student_address_to_specific_bootcamp
-                                .entry((caller, student_address))
-                                .append()
-                                .write(
-                                    RegisteredBootcamp {
-                                        address_of_org: caller,
-                                        student: student_address.clone(),
-                                        acceptance_status: true,
-                                        bootcamp_id: bootcamp_id,
-                                    },
-                                );
-                            self
-                                .student_address_to_bootcamps
-                                .entry(student_address)
-                                .append()
-                                .write(
-                                    RegisteredBootcamp {
-                                        address_of_org: caller,
-                                        student: student_address,
-                                        acceptance_status: true,
-                                        bootcamp_id: bootcamp_id,
-                                    },
-                                );
-                        }
-                        // update organization and instructor data
-                        let mut org = self.organization_info.entry(caller).read();
-                        org.number_of_students = org.number_of_students + 1;
-                        self.organization_info.entry(caller).write(org);
-                    };
-
-            self
-                .emit(
-                    RegistrationApproved {
-                        student_address: student_address, bootcamp_id: bootcamp_id,
-                    },
+            for i in 0..ArrayTrait::len(self.org_to_requests.entry(caller)) {
+                let mut student = StorageMapReadAccess::read(
+                    self.org_to_requests.entry(caller).at(i),
                 );
+                if student.address_of_student == student_address {
+                    student.status = 1;
+                    StorageMapWriteAccess::write(
+                        self.org_to_requests.entry(caller).at(i),
+                        student,
+                    );
+
+                    let mut the_bootcamp: Bootcamp = StorageMapReadAccess::read(
+                        self.org_to_bootcamps.entry(caller).at(bootcamp_id),
+                    );
+                    the_bootcamp.number_of_students += 1;
+                    StorageMapWriteAccess::write(
+                        self.org_to_bootcamps.entry(caller).at(bootcamp_id),
+                        the_bootcamp,
+                    );
+
+                    MutableArrayTrait::append(
+                        self.student_address_to_specific_bootcamp
+                            .entry((caller, student_address)),
+                        RegisteredBootcamp {
+                            address_of_org: caller,
+                            student: student_address.clone(),
+                            acceptance_status: true,
+                            bootcamp_id: bootcamp_id,
+                        },
+                    );
+                    MutableArrayTrait::append(
+                        self.student_address_to_bootcamps.entry(student_address),
+                        RegisteredBootcamp {
+                            address_of_org: caller,
+                            student: student_address,
+                            acceptance_status: true,
+                            bootcamp_id: bootcamp_id,
+                        },
+                    );
+                }
+            }
+            // Emit event
+            self.emit(RegistrationApproved {
+                student_address: student_address,
+                bootcamp_id: bootcamp_id,
+            });
         } else {
             panic!("no organization created.");
         }
     }
 
-   pub fn decline_registration(
-        ref self: ContractState, student_address: ContractAddress, bootcamp_id: u64,
+    fn decline_registration(
+        ref self: ContractState,
+        student_address: ContractAddress,
+        bootcamp_id: u64,
     ) {
         let caller = get_caller_address();
-        let status: bool = self.created_status.entry(caller).read();
+        let status: bool = StorageMapReadAccess::read(self.created_status.entry(caller));
         if status {
-            for i in 0
-                ..self
-                    .org_to_requests
-                    .entry(caller)
-                    .len() {
-                        if self
-                            .org_to_requests
-                            .entry(caller)
-                            .at(i)
-                            .read()
-                            .address_of_student == student_address {
-                            let mut student = self.org_to_requests.entry(caller).at(i).read();
-                            student.status = 2;
-                            self.org_to_requests.entry(caller).at(i).write(student);
-                        }
-                    };
-
-            self
-                .emit(
-                    RegistrationDeclined {
-                        student_address: student_address, bootcamp_id: bootcamp_id,
-                    },
+            for i in 0..ArrayTrait::len(self.org_to_requests.entry(caller)) {
+                let mut student = StorageMapReadAccess::read(
+                    self.org_to_requests.entry(caller).at(i),
                 );
+                if student.address_of_student == student_address {
+                    student.status = 2;
+                    StorageMapWriteAccess::write(
+                        self.org_to_requests.entry(caller).at(i),
+                        student,
+                    );
+                }
+            }
+            // Emit event
+            self.emit(RegistrationDeclined {
+                student_address: student_address,
+                bootcamp_id: bootcamp_id,
+            });
         } else {
             panic!("no organization created.");
         }
     }
 
-
-   pub fn mark_attendance_for_a_class(
+   fn mark_attendance_for_a_class(
         ref self: ContractState,
         org_: ContractAddress,
         instructor_: ContractAddress,
@@ -297,6 +320,13 @@ pub mod OrganizationManagement {
             );
     }
 
+    fn is_bootcamp_suspended(
+        self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
+    ) -> bool {
+        let is_suspended: bool = self.bootcamp_suspended.entry(org_).entry(bootcamp_id).read();
+        is_suspended
+    }
+
 
     fn get_all_registration_request(
         self: @ContractState, org_: ContractAddress,
@@ -322,17 +352,16 @@ pub mod OrganizationManagement {
 
 
    
-        
-        pub fn get_bootcamp_active_meet_link(
-            self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
+    fn get_bootcamp_active_meet_link(
+            self: @ContractState, org_: felt252, bootcamp_id: u64, // Changed ContractAddress to felt252
         ) -> ByteArray {
-            let bootcamp: Bootcamp = self.org_to_bootcamps.entry(org_).at(bootcamp_id).read();
+            let bootcamp: Bootcamp = self.org_to_bootcamps.entry(org_).at(bootcamp_id).read(); // Ensure .at() and .read() traits are imported
             bootcamp.active_meet_link
         }
 
 
-     pub   fn get_bootcamp_uploaded_video_link(
-            self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
+    fn get_bootcamp_uploaded_video_link(
+            self: @ContractState, org_: felt252, bootcamp_id: u64, // Changed ContractAddress to felt252
         ) -> Array<ByteArray> {
             let mut arr_of_all_uploaded_bootcamps_link = array![];
 
@@ -355,7 +384,7 @@ pub mod OrganizationManagement {
     }
 
      // read functions
-     pub fn get_all_bootcamps_on_platform(self: @ContractState) -> Array<Bootcamp> {
+    fn get_all_bootcamps_on_platform(self: @ContractState) -> Array<Bootcamp> {
         let mut arr_of_all_created_bootcamps_on_platform = array![];
 
         for i in 0
@@ -369,23 +398,15 @@ pub mod OrganizationManagement {
         arr_of_all_created_bootcamps_on_platform
     }
 
-    pub fn get_bootcamp_info(
+    
+    fn get_bootcamp_info(
         self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
     ) -> Bootcamp {
         let bootcamp: Bootcamp = self.org_to_bootcamps.entry(org_).at(bootcamp_id).read();
         bootcamp
     }
 
-
-
-   pub fn is_bootcamp_suspended(
-        self: @ContractState, org_: ContractAddress, bootcamp_id: u64,
-    ) -> bool {
-        let is_suspended: bool = self.bootcamp_suspended.entry(org_).entry(bootcamp_id).read();
-        is_suspended
-    }
-
-   pub fn get_registered_bootcamp(
+   fn get_registered_bootcamp(
         self: @ContractState, student: ContractAddress
     ) -> Array<RegisteredBootcamp> {
         let mut array_of_reg_bootcamp = array![];
@@ -400,8 +421,7 @@ pub mod OrganizationManagement {
         array_of_reg_bootcamp
     }
 
-
-   pub fn get_all_bootcamp_classes(
+   fn get_all_bootcamp_classes(
         self: @ContractState, org: ContractAddress, bootcamp_id: u64
     ) -> Array<u64> {
         let mut arr = array![];
@@ -417,7 +437,9 @@ pub mod OrganizationManagement {
                 };
         arr
     }
-    pub fn get_certified_student_bootcamp_address(
+    
+    
+    fn get_certified_student_bootcamp_address(
         self: @ContractState, org: ContractAddress, bootcamp_id: u64
     ) -> Array<ContractAddress> {
         let mut arr = array![];
@@ -437,11 +459,10 @@ pub mod OrganizationManagement {
                 };
         arr
     }
-    pub fn get_bootcamp_certification_status(
+
+
+    fn get_bootcamp_certification_status(
         self: @ContractState, org: ContractAddress, bootcamp_id: u64, student: ContractAddress
     ) -> bool {
         self.certify_student.entry((org, bootcamp_id, student)).read()
     }
-
-
-}

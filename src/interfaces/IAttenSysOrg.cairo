@@ -1,7 +1,6 @@
 use core::starknet::{ContractAddress};
-use crate::base::types{
-    Organization, Bootcamp, Instructor, Class, Student, RegisteredBootcamp, Bootcampclass
-};
+use core::array::Array; // Import Array type
+use crate::base::types::{Student, Instructor, Bootcamp, Class, Organization, RegisteredBootcamp}; // Import missing types
 
 #[starknet::interface]
 pub trait IAttenSysOrg<TContractState> {
@@ -50,7 +49,7 @@ pub trait IAttenSysOrg<TContractState> {
         class_id: u64,
         bootcamp_id: u64,
     );
-    fn batch_certify_students(ref self: TContractState, org_: ContractAddress, bootcamp_id: u64,);
+    fn batch_certify_students(ref self: TContractState, org_: ContractAddress, bootcamp_id: u64);
     fn single_certify_student(
         ref self: TContractState, org_: ContractAddress, bootcamp_id: u64, students: ContractAddress
     );
@@ -71,34 +70,33 @@ pub trait IAttenSysOrg<TContractState> {
     ) -> Array<ByteArray>;
     fn get_all_registration_request(
         self: @TContractState, org_: ContractAddress,
-    ) -> Array<AttenSysOrg::Student>;
+    ) -> Array<Student>;
     fn get_org_instructors(
         self: @TContractState, org_: ContractAddress,
-    ) -> Array<AttenSysOrg::Instructor>;
+    ) -> Array<Instructor>;
     fn get_all_org_bootcamps(
         self: @TContractState, org_: ContractAddress,
-    ) -> Array<AttenSysOrg::Bootcamp>;
-    fn get_all_bootcamps_on_platform(self: @TContractState) -> Array<AttenSysOrg::Bootcamp>;
+    ) -> Array<Bootcamp>;
+    fn get_all_bootcamps_on_platform(self: @TContractState) -> Array<Bootcamp>;
     fn get_all_org_classes(
         self: @TContractState, org_: ContractAddress,
-    ) -> Array<AttenSysOrg::Class>;
+    ) -> Array<Class>;
     fn get_instructor_org_classes(
         self: @TContractState, org_: ContractAddress, instructor: ContractAddress,
-    ) -> Array<AttenSysOrg::Class>;
-    fn get_org_info(self: @TContractState, org_: ContractAddress) -> AttenSysOrg::Organization;
-    fn get_all_org_info(self: @TContractState) -> Array<AttenSysOrg::Organization>;
-    //@todo narrow down the student info to specific organization
-    fn get_student_info(self: @TContractState, student_: ContractAddress) -> AttenSysOrg::Student;
+    ) -> Array<Class>;
+    fn get_org_info(self: @TContractState, org_: ContractAddress) -> Organization;
+    fn get_all_org_info(self: @TContractState) -> Array<Organization>;
+    fn get_student_info(self: @TContractState, student_: ContractAddress) -> Student;
     fn get_student_classes(
         self: @TContractState, student: ContractAddress,
-    ) -> Array<AttenSysOrg::Class>;
+    ) -> Array<Class>;
     fn get_instructor_part_of_org(self: @TContractState, instructor: ContractAddress) -> bool;
     fn get_instructor_info(
         self: @TContractState, instructor: ContractAddress,
-    ) -> Array<AttenSysOrg::Instructor>;
+    ) -> Array<Instructor>;
     fn get_bootcamp_info(
         self: @TContractState, org_: ContractAddress, bootcamp_id: u64,
-    ) -> AttenSysOrg::Bootcamp;
+    ) -> Bootcamp;
     fn transfer_admin(ref self: TContractState, new_admin: ContractAddress);
     fn claim_admin_ownership(ref self: TContractState);
     fn get_admin(self: @TContractState) -> ContractAddress;
@@ -110,10 +108,10 @@ pub trait IAttenSysOrg<TContractState> {
     fn is_org_suspended(self: @TContractState, org_: ContractAddress) -> bool;
     fn get_registered_bootcamp(
         self: @TContractState, student: ContractAddress
-    ) -> Array<AttenSysOrg::RegisteredBootcamp>;
+    ) -> Array<RegisteredBootcamp>;
     fn get_specific_organization_registered_bootcamp(
         self: @TContractState, org: ContractAddress, student: ContractAddress
-    ) -> Array<AttenSysOrg::RegisteredBootcamp>;
+    ) -> Array<RegisteredBootcamp>;
     fn get_class_attendance_status(
         self: @TContractState,
         org: ContractAddress,

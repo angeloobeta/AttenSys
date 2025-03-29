@@ -18,7 +18,8 @@ pub mod AttenSysCourse {
     use crate::base::types::{Course, Creator};
 
     use core::starknet::{
-        ContractAddress, get_caller_address, ClassHash,
+        ContractAddress, get_caller_address, syscalls::deploy_syscall, ClassHash,
+        contract_address_const,
     };
     use core::starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess, Vec, VecTrait,
@@ -511,6 +512,7 @@ pub mod AttenSysCourse {
             }
         }
     }
+
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
